@@ -532,7 +532,24 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
       });
-      const data = await res.json();
+  
+      // Log response details
+      console.log('Response status:', res.status);
+      console.log('Response headers:', [...res.headers.entries()]);
+  
+      // Check if response is empty or not JSON
+      const text = await res.text(); // Get raw response body
+      console.log('Response body:', text);
+  
+      // Attempt to parse as JSON
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        console.error('JSON parse error:', e, 'Raw response:', text);
+        throw new Error('Invalid JSON response from server');
+      }
+  
       if (!res.ok) throw new Error(data.detail || 'Authentication failed');
       if (!isRegistering) {
         localStorage.setItem('token', data.access_token);
