@@ -67,8 +67,9 @@ function App() {
   const { isOpen: isImageOpen, onOpen: onImageOpen, onClose: onImageClose } = useDisclosure();
   const { isOpen: isFriendRequestsOpen, onOpen: onFriendRequestsOpen, onClose: onFriendRequestsClose } = useDisclosure();
 
-  const apiUrl = 'chitchat-client-nato.onrender.com';
-  const wsUrl = 'ws://chitchat-client-nato.onrender.com/ws';
+// Replace hardcoded URLs
+  const apiUrl = process.env.REACT_APP_API_URL || 'https://chitchat-client-nato.onrender.com';
+  const wsUrl = process.env.REACT_APP_WS_URL || 'wss://chitchat-client-nato.onrender.com/ws';
 
   const themes = {
     neon: {
