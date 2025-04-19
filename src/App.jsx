@@ -68,7 +68,7 @@ function App() {
   const { isOpen: isFriendRequestsOpen, onOpen: onFriendRequestsOpen, onClose: onFriendRequestsClose } = useDisclosure();
 
   const apiUrl = 'https://chitchat-server-emw5.onrender.com';
-  const wsUrl = 'ws://chitchat-server-emw5.onrender.com/ws';
+  const wsUrl = 'wss://chitchat-server-emw5.onrender.com/ws';
 
   const themes = {
     neon: {
@@ -270,101 +270,100 @@ function App() {
   }, []);
 
   const connectWebSocket = useCallback(() => {
-    if (!token || socketRef.current?.readyState === WebSocket.OPEN) return;
+  if (!token || socketRef.current?.readyState === WebSocket.OPEN) return;
 
-    let reconnectAttempts = 0;
-    const maxAttempts = 5;
-    const maxDelay = 30000;
+  let reconnectAttempts = 0;
+  const maxAttempts = 5;
+  const maxDelay = 30000;
 
-    const attemptReconnect = () => {
-      if (reconnectAttempts >= maxAttempts) {
-        toast({
-          title: 'Connection Failed',
-          description: 'Unable to connect to the server. Please try again later.',
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        });
-        return;
-      }
+  const attemptReconnect = () => {
+    if (reconnectAttempts >= maxAttempts) {
+      toast({
+        title: 'Connection Failed',
+        description: 'Unable to connect to the server. Please try again later.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+      return;
+    }
 
-      const ws = new WebSocket(`${wsUrl}?token=${token}`);
-      socketRef.current = ws;
+    const ws = new WebSocket(`wss://chitchat-server-emw5.onrender.com/ws?token=${token}`); // Updated to wss://
+    socketRef.current = ws;
 
-      ws.onopen = () => {
-        setIsSocketConnected(true);
-        reconnectAttempts = 0;
-        toast({
-          title: 'Connected',
-          description: 'Real-time messaging enabled.',
-          status: 'success',
-          duration: 2000,
-          isClosable: true,
-        });
-      };
-
-      ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        switch (data.type) {
-          case 'message':
-            handleNewMessage(data.data);
-            break;
-          case 'read':
-            handleMessageRead(data.data.id);
-            break;
-          case 'edit':
-            handleMessageEdit(data.data);
-            break;
-          case 'delete':
-            handleMessageDelete(data.data.id);
-            break;
-          case 'status':
-            handleUserStatus(data.data);
-            break;
-          case 'friend_accepted':
-            handleFriendAccepted(data.data);
-            break;
-          case 'typing':
-            handleTyping(data.data);
-            break;
-          case 'reaction':
-            handleReaction(data.data);
-            break;
-          case 'pinned':
-            handlePinned(data.data);
-            break;
-          case 'ping':
-            ws.send(JSON.stringify({ type: 'pong' }));
-            break;
-          default:
-            console.warn('Unknown WebSocket message type:', data.type);
-        }
-      };
-
-      ws.onclose = (event) => {
-        setIsSocketConnected(false);
-        const delay = Math.min(1000 * 2 ** reconnectAttempts, maxDelay);
-        reconnectAttempts++;
-        toast({
-          title: 'Disconnected',
-          description: `Reconnecting in ${delay / 1000} seconds...`,
-          status: 'warning',
-          duration: 3000,
-          isClosable: true,
-        });
-        setTimeout(attemptReconnect, delay);
-      };
-
-      ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        setIsSocketConnected(false);
-        ws.close();
-      };
+    ws.onopen = () => {
+      setIsSocketConnected(true);
+      reconnectAttempts = 0;
+      toast({
+        title: 'Connected',
+        description: 'Real-time messaging enabled.',
+        status: 'success',
+        duration: 2000,
+        isClosable: true,
+      });
     };
 
-    attemptReconnect();
-  }, [token, toast, handleNewMessage, handleMessageRead, handleMessageEdit, handleMessageDelete, handleUserStatus, handleFriendAccepted, handleTyping, handleReaction, handlePinned]);
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      switch (data.type) {
+        case 'message':
+          handleNewMessage(data.data);
+          break;
+        case 'read':
+          handleMessageRead(data.data.id);
+          break;
+        case 'edit':
+          handleMessageEdit(data.data);
+          break;
+        case 'delete':
+          handleMessageDelete(data.data.id);
+          break;
+        case 'status':
+          handleUserStatus(data.data);
+          break;
+        case 'friend_accepted':
+          handleFriendAccepted(data.data);
+          break;
+        case 'typing':
+          handleTyping(data.data);
+          break;
+        case 'reaction':
+          handleReaction(data.data);
+          break;
+        case 'pinned':
+          handlePinned(data.data);
+          break;
+        case 'ping':
+          ws.send(JSON.stringify({ type: 'pong' }));
+          break;
+        default:
+          console.warn('Unknown WebSocket message type:', data.type);
+      }
+    };
 
+    ws.onclose = (event) => {
+      setIsSocketConnected(false);
+      const delay = Math.min(1000 * 2 ** reconnectAttempts, maxDelay);
+      reconnectAttempts++;
+      toast({
+        title: 'Disconnected',
+        description: `Reconnecting in ${delay / 1000} seconds...`,
+        status: 'warning',
+        duration: 3000,
+        isClosable: true,
+      });
+      setTimeout(attemptReconnect, delay);
+    };
+
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+      setIsSocketConnected(false);
+      ws.close();
+    };
+  };
+
+  attemptReconnect();
+}, [token, toast, handleNewMessage, handleMessageRead, handleMessageEdit, handleMessageDelete, handleUserStatus, handleFriendAccepted, handleTyping, handleReaction, handlePinned]);
   const fetchCurrentUser = useCallback(async () => {
     if (!token || currentUsername) return;
     setIsLoading(true);
