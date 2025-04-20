@@ -1754,13 +1754,14 @@ function App() {
                     }}
                     onBlur={stopTyping}
                     placeholder="Type a message..."
-                    className={`flex-1 p-4 rounded-lg ${currentTheme.input} ${currentTheme.text} placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all text-base resize-none`}
+                    className={`flex-1 p-3 rounded-lg ${currentTheme.input} ${currentTheme.text} placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all text-base resize-none max-h-24`}
                     aria-label="Message input"
+                    style={{ minHeight: '40px', maxHeight: '100px' }}
                   />
                   <Tooltip label="Send Message" placement="top">
                     <MotionButton
                       onClick={() => sendMessage()}
-                      className={`p-4 ${currentTheme.button} ${currentTheme.text} rounded-lg ${currentTheme.hover} transition-all text-base font-semibold`}
+                      className={`p-3 ${currentTheme.button} ${currentTheme.text} rounded-lg ${currentTheme.hover} transition-all text-base font-semibold`}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       disabled={!messageContent.trim() || isLoading}
