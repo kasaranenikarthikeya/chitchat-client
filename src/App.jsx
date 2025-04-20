@@ -214,7 +214,7 @@ function App() {
             ...prev,
             [data.username]: false,
           }));
-        }, 2000);
+        }, 3000); // Extended timeout for visibility
       }
     }
   }, [currentUsername]);
@@ -1446,7 +1446,7 @@ function App() {
         </MotionBox>
       )}
 
-      <Box className={`flex-1 flex flex-col ${currentTheme.secondary} overflow-hidden chat-section`}>
+<Box className={`flex-1 flex flex-col ${currentTheme.secondary} overflow-hidden chat-section`}>
         {selectedUser ? (
           <>
             <Flex
@@ -1502,7 +1502,7 @@ function App() {
             <Box
               ref={chatContainerRef}
               className="chat-container pt-0 flex-1 overflow-y-auto"
-              style={{ paddingBottom: '80px' }} // Fixed to match input container height
+              style={{ paddingBottom: '80px' }}
             >
               <AnimatePresence>
                 {isLoading && isInitialLoad ? (
@@ -1530,7 +1530,7 @@ function App() {
                             )}
                             <SlideFade in={true} unmountOnExit>
                               <MotionBox
-                                className={`message-bubble ${isSelf ? 'self' : 'other'} ${currentTheme.bubbleSelf} ${!isSelf ? currentTheme.bubbleOther : ''} relative`}
+                                className={`message-bubble ${isSelf ? 'self' : 'other'} ${isSelf ? currentTheme.bubbleSelf : currentTheme.bubbleOther} relative`}
                                 data-message-id={msg.id}
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
@@ -1573,16 +1573,21 @@ function App() {
                                     )}
                                   </Text>
                                 )}
-                                {showTimestamps && (
-                                  <Text className={`text-xs ${currentTheme.text} mt-1 opacity-70`}>
+                                <HStack spacing={1} className="mt-1">
+                                  <Text className={`text-xs ${currentTheme.text} opacity-70`}>
                                     {formatTimestamp(msg.timestamp)}
                                   </Text>
-                                )}
+                                  {isSelf && (
+                                    <>
+                                      <Text className="tick-mark">{msg.is_read ? '✓✓' : '✓'}</Text>
+                                    </>
+                                  )}
+                                </HStack>
                                 {isPinned && (
                                   <Text className="text-xs text-yellow-300 mt-1">Pinned</Text>
                                 )}
                                 <HStack className="actions absolute top-2 right-2 opacity-0 transition-opacity">
-                                  {isSelf && (
+                                  {isSelf ? (
                                     <>
                                       <Tooltip label="Edit" placement="top">
                                         <IconButton
@@ -1606,6 +1611,19 @@ function App() {
                                         />
                                       </Tooltip>
                                     </>
+                                  ) : (
+                                    <Tooltip label="Delete" placement="top">
+                                      <IconButton
+                                        icon={<FaTrash />}
+                                        onClick={() => {
+                                          setShowDeleteModal(msg.id);
+                                          onDeleteOpen();
+                                        }}
+                                        className="text-red-400 hover:text-red-500"
+                                        size="xs"
+                                        aria-label="Delete message"
+                                      />
+                                    </Tooltip>
                                   )}
                                   <Tooltip label="Pin" placement="top">
                                     <IconButton
@@ -1649,6 +1667,16 @@ function App() {
                           </React.Fragment>
                         );
                       })}
+                    {typingUsers[selectedUser] && (
+                      <Text className="typing-indicator mx-auto">
+                        {selectedUser} is typing
+                        <span className="typing-dots">
+                          <span style={{ '--i': 1 }}>.</span>
+                          <span style={{ '--i': 2 }}>.</span>
+                          <span style={{ '--i': 3 }}>.</span>
+                        </span>
+                      </Text>
+                    )}
                     {queuedMessages.some(q => q.message.recipient_username === selectedUser) && (
                       <Text className="text-gray-300 text-sm text-center">Messages queued for sending...</Text>
                     )}
