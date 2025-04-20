@@ -54,6 +54,7 @@ function App() {
   const socketRef = useRef(null);
   const observerRef = useRef(null);
   const chatContainerRef = useRef(null);
+  const inputContainerRef = useRef(null);
   const fileInputRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
@@ -94,17 +95,36 @@ function App() {
   useEffect(() => {
     const updateChatContainerHeight = () => {
       const chatContainer = chatContainerRef.current;
-      if (chatContainer) {
-        const inputContainer = document.querySelector('.input-container');
-        const inputHeight = inputContainer ? inputContainer.offsetHeight : 60;
-        chatContainer.style.height = `calc(100vh - ${inputHeight + 80}px)`; // 80px for header
-        chatContainer.style.marginBottom = `${inputHeight}px`;
+      const inputContainer = inputContainerRef.current;
+      if (chatContainer && inputContainer) {
+        const inputHeight = inputContainer.offsetHeight;
+        const safeAreaBottom = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--safe-area-inset-bottom')) || 0;
+        chatContainer.style.height = `calc(100dvh - ${inputHeight + safeAreaBottom + 80}px)`; // 80px for header
+        chatContainer.style.marginBottom = `${inputHeight + safeAreaBottom}px`;
       }
     };
 
     updateChatContainerHeight();
     window.addEventListener('resize', updateChatContainerHeight);
-    return () => window.removeEventListener('resize', updateChatContainerHeight);
+    window.addEventListener('orientationchange', updateChatContainerHeight);
+
+    // Handle virtual keyboard on mobile
+    const handleKeyboard = () => {
+      setTimeout(() => {
+        const inputContainer = inputContainerRef.current;
+        if (inputContainer) {
+          inputContainer.scrollIntoView({ behavior: 'smooth', block: 'end' });
+          window.scrollTo(0, document.body.scrollHeight); // Force scroll to bottom
+        }
+      }, 300); // Delay to account for keyboard animation
+    };
+
+    window.addEventListener('resize', handleKeyboard); // Trigger on keyboard open
+    return () => {
+      window.removeEventListener('resize', updateChatContainerHeight);
+      window.removeEventListener('orientationchange', updateChatContainerHeight);
+      window.removeEventListener('resize', handleKeyboard);
+    };
   }, []);
 
   const scrollToBottom = useCallback(() => {
@@ -897,7 +917,7 @@ function App() {
 
   if (!token) {
     return (
-      <div className={`min-h-screen flex items-center justify-center ${currentTheme.primary} p- RosyCheeked p-4 font-sans`}>
+      <div className={`min-h-screen flex items-center justify-center ${currentTheme.primary} p-4 font-sans`}>
         <MotionBox
           className="w-full max-w-md p-8 bg-white/15 backdrop-blur-3xl rounded-2xl shadow-2xl border border-white/30"
           initial={{ opacity: 0, y: 20 }}
@@ -1364,7 +1384,6 @@ function App() {
                   />
                   <MenuList className="bg-gray-800 text-white">
                     <MenuItem onClick={() => setTheme('neon')} className="hover:bg-gray-700">Neon</MenuItem>
-                    {/* Add more themes here in the future */}
                   </MenuList>
                 </Menu>
               </Tooltip>
@@ -1598,38 +1617,34 @@ function App() {
                     );
                   })}
                   {typingUsers[selectedUser] && (
-                    <HStack className="p-4">
-                      <Avatar name={selectedUser} className="bg-gradient-to-r from-pink-500 to-purple-500 w-10 h-10 ring-2 ring-white/30" />
-                      <Text className="typing-indicator">
-                        {selectedUser} is typing
-                        <span className="typing-dots">
-                          <span style={{ '--i': 1 }}>.</span>
-                          <span style={{ '--i': 2 }}>.</span>
-                          <span style={{ '--i': 3 }}>.</span>
-                        </span>
-                      </Text>
-                    </HStack>
-                  )}
-                  <div ref={messagesEndRef} />
-                </VStack>
-              )}
-            </Box>
-            <HStack className={`input-container ${currentTheme.secondary}`} spacing={2}>
-              {isRecording ? (
-                <HStack w="full" spacing={4}>
-                  <Text className="text-red-400 font-semibold text-sm">{formatTime(recordingTime)}</Text>
-                  <Box className="recording-progress flex-1" />
-                  <Button
-                    onClick={stopRecording}
-                    className="text-red-400 hover:text-red-500 transition-colors text-sm font-medium"
-                    aria-label="Stop recording"
-                    size="sm"
-                  >
-                    Stop
-                  </Button>
-                </HStack>
-              ) : audioBlob ? (
-                <HStack w="full" spacing={4}>
+                    <Text className="typing-indicator">
+                    Typing <span className="typing-dots">
+                      <span style={{ '--i': 1 }}>.</span>
+                      <span style={{ '--i': 2 }}>.</span>
+                      <span style={{ '--i': 3 }}>.</span>
+                    </span>
+                  </Text>
+                )}
+                <div ref={messagesEndRef} />
+              </VStack>
+            )}
+          </Box>
+          <HStack ref={inputContainerRef} className={`input-container ${currentTheme.secondary}`} spacing={2}>
+            {isRecording ? (
+              <HStack w="full" spacing={4}>
+                <Text className="text-red-400 font-semibold text-sm">{formatTime(recordingTime)}</Text>
+                <Box className="recording-progress flex-1" />
+                <Button
+                  onClick={stopRecording}
+                  className="text-red-400 hover:text-red-500 transition-colors text-sm font-medium"
+                  aria-label="Stop recording"
+                  size="sm"
+                >
+                  Stop
+                </Button>
+              </HStack>
+            ) : audioBlob ? (
+              <HStack w="full" spacing={4}>
                 <Button
                   onClick={sendAudioMessage}
                   className="text-purple-300 hover:text-purple-400 transition-colors text-sm font-medium"
@@ -1708,11 +1723,12 @@ function App() {
                   onFocus={() => {
                     // Ensure input is visible on mobile when focused
                     setTimeout(() => {
-                      const inputContainer = document.querySelector('.input-container');
+                      const inputContainer = inputContainerRef.current;
                       if (inputContainer) {
                         inputContainer.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                        window.scrollTo(0, document.body.scrollHeight); // Force scroll to bottom
                       }
-                    }, 100);
+                    }, 300); // Delay to account for keyboard animation
                   }}
                 />
                 <Tooltip label="Send Message" placement="top">
