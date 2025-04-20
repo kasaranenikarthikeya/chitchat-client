@@ -90,6 +90,23 @@ function App() {
 
   const currentTheme = themes[theme];
 
+  // Dynamic height adjustment for chat container
+  useEffect(() => {
+    const updateChatContainerHeight = () => {
+      const chatContainer = chatContainerRef.current;
+      if (chatContainer) {
+        const inputContainer = document.querySelector('.input-container');
+        const inputHeight = inputContainer ? inputContainer.offsetHeight : 60;
+        chatContainer.style.height = `calc(100vh - ${inputHeight + 80}px)`; // 80px for header
+        chatContainer.style.marginBottom = `${inputHeight}px`;
+      }
+    };
+
+    updateChatContainerHeight();
+    window.addEventListener('resize', updateChatContainerHeight);
+    return () => window.removeEventListener('resize', updateChatContainerHeight);
+  }, []);
+
   const scrollToBottom = useCallback(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -880,7 +897,7 @@ function App() {
 
   if (!token) {
     return (
-      <div className={`min-h-screen flex items-center justify-center ${currentTheme.primary} p-4 font-sans`}>
+      <div className={`min-h-screen flex items-center justify-center ${currentTheme.primary} p- RosyCheeked p-4 font-sans`}>
         <MotionBox
           className="w-full max-w-md p-8 bg-white/15 backdrop-blur-3xl rounded-2xl shadow-2xl border border-white/30"
           initial={{ opacity: 0, y: 20 }}
@@ -992,21 +1009,6 @@ function App() {
             50% { opacity: 1; }
             100% { opacity: 0.6; }
           }
-          .chat-container {
-            scroll-behavior: smooth;
-            overflow-x: hidden;
-            overflow-y: auto;
-            height: calc(100vh - 180px); /* Adjusted for better mobile fit */
-            scrollbar-width: thin;
-            scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
-          }
-          .chat-container::-webkit-scrollbar {
-            width: 6px;
-          }
-          .chat-container::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 3px;
-          }
           .sidebar-container {
             overflow-y: auto;
             overflow-x: hidden;
@@ -1101,16 +1103,6 @@ function App() {
             transform: translateY(-3px);
             box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
           }
-          .input-container {
-            border-radius: 30px;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-            background: rgba(255, 255, 255, 0.12);
-            backdrop-filter: blur(15px);
-            border: 1px solid rgba(255, 255, 255, 0.25);
-            position: sticky;
-            bottom: 0;
-            z-index: 10;
-          }
           .new-message {
             animation: slideIn 0.4s ease;
           }
@@ -1167,21 +1159,6 @@ function App() {
             }
             .sidebar-mobile-nav {
               display: none;
-            }
-            .chat-container {
-              height: calc(100vh - 140px); /* Reduced height for input visibility */
-              margin-bottom: 60px; /* Ensure space for input container */
-            }
-            .input-container {
-              padding: 8px; /* Reduced padding for better fit */
-              position: fixed;
-              bottom: 0;
-              left: 0;
-              right: 0;
-              z-index: 20;
-              background: rgba(255, 255, 255, 0.12);
-              backdrop-filter: blur(15px);
-              border-top: 1px solid rgba(255, 255, 255, 0.25);
             }
             .message-bubble {
               max-width: 80%;
@@ -1637,7 +1614,7 @@ function App() {
                 </VStack>
               )}
             </Box>
-            <HStack className={`p-4 ${currentTheme.secondary} input-container`} spacing={3}>
+            <HStack className={`input-container ${currentTheme.secondary}`} spacing={2}>
               {isRecording ? (
                 <HStack w="full" spacing={4}>
                   <Text className="text-red-400 font-semibold text-sm">{formatTime(recordingTime)}</Text>
@@ -1646,234 +1623,272 @@ function App() {
                     onClick={stopRecording}
                     className="text-red-400 hover:text-red-500 transition-colors text-sm font-medium"
                     aria-label="Stop recording"
+                    size="sm"
                   >
                     Stop
                   </Button>
                 </HStack>
               ) : audioBlob ? (
-                <HStack w="full" spacing={3}>
-                  <Button
-                    onClick={sendAudioMessage}
-                    className="text-emerald-400 hover:text-emerald-500 transition-colors text-sm font-medium"
-                    aria-label="Send audio"
-                  >
-                    Send Audio
-                  </Button>
-                  <Button
-                    onClick={() => setAudioBlob(null)}
-                    className="text-red-400 hover:text-red-500 transition-colors text-sm font-medium"
-                    aria-label="Cancel audio"
-                  >
-                    Cancel
-                  </Button>
-                </HStack>
-              ) : (
-                <>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    ref={fileInputRef}
-                    style={{ display: 'none' }}
-                    onChange={handleImageUpload}
+                <HStack w="full" spacing={4}>
+                <Button
+                  onClick={sendAudioMessage}
+                  className="text-purple-300 hover:text-purple-400 transition-colors text-sm font-medium"
+                  aria-label="Send audio message"
+                  size="sm"
+                >
+                  Send Audio
+                </Button>
+                <Button
+                  onClick={() => setAudioBlob(null)}
+                  className="text-red-400 hover:text-red-500 transition-colors text-sm font-medium"
+                  aria-label="Discard audio"
+                  size="sm"
+                >
+                  Discard
+                </Button>
+              </HStack>
+            ) : (
+              <>
+                <Tooltip label="Attach Image" placement="top">
+                  <IconButton
+                    icon={<FaPaperclip />}
+                    onClick={() => fileInputRef.current.click()}
+                    className="text-purple-300 hover:text-purple-400 transition-colors"
+                    aria-label="Attach image"
+                    size="sm"
                   />
-                  <Tooltip label="Upload Image" placement="top">
+                </Tooltip>
+                <input
+                  type="file"
+                  accept="image/*"
+                  ref={fileInputRef}
+                  style={{ display: 'none' }}
+                  onChange={handleImageUpload}
+                />
+                <Tooltip label={isRecording ? 'Stop Recording' : 'Record Audio'} placement="top">
+                  <IconButton
+                    icon={<FaMicrophone />}
+                    onClick={isRecording ? stopRecording : startRecording}
+                    className={`${isRecording ? 'text-red-400' : 'text-purple-300'} hover:${isRecording ? 'text-red-500' : 'text-purple-400'} transition-colors`}
+                    aria-label={isRecording ? 'Stop recording' : 'Record audio'}
+                    size="sm"
+                  />
+                </Tooltip>
+                <Popover placement="top-start">
+                  <PopoverTrigger>
                     <IconButton
-                      icon={<FaPaperclip />}
-                      onClick={() => fileInputRef.current.click()}
+                      icon={<FaSmile />}
                       className="text-purple-300 hover:text-purple-400 transition-colors"
-                      aria-label="Upload image"
+                      aria-label="Open emoji picker"
                       size="sm"
                     />
-                  </Tooltip>
-                  <Tooltip label="Record Audio" placement="top">
-                    <IconButton
-                      icon={<FaMicrophone />}
-                      onClick={startRecording}
-                      className="text-purple-300 hover:text-purple-400 transition-colors"
-                      aria-label="Start recording"
-                      size="sm"
-                    />
-                  </Tooltip>
-                  <Tooltip label="Pick Emoji" placement="top">
-                    <Popover>
-                      <PopoverTrigger>
-                        <IconButton
-                          icon={<FaSmile />}
-                          className="text-purple-300 hover:text-purple-400 transition-colors"
-                          aria-label="Open emoji picker"
-                          size="sm"
-                        />
-                      </PopoverTrigger>
-                      <PopoverContent className="bg-gray-800">
-                        <PopoverBody>
-                          <EmojiPicker onEmojiClick={handleEmojiClick} />
-                        </PopoverBody>
-                      </PopoverContent>
-                    </Popover>
-                  </Tooltip>
-                  <Input
-                    value={messageContent}
-                    onChange={(e) => {
-                      setMessageContent(e.target.value);
-                      debouncedTyping();
-                    }}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        sendMessage();
+                  </PopoverTrigger>
+                  <PopoverContent className="bg-gray-800 border border-white/25">
+                    <PopoverBody>
+                      <EmojiPicker onEmojiClick={handleEmojiClick} />
+                    </PopoverBody>
+                  </PopoverContent>
+                </Popover>
+                <Input
+                  value={messageContent}
+                  onChange={(e) => {
+                    setMessageContent(e.target.value);
+                    debouncedTyping();
+                  }}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      sendMessage();
+                    }
+                  }}
+                  onBlur={stopTyping}
+                  placeholder="Type a message..."
+                  className={`flex-1 p-4 rounded-lg ${currentTheme.input} ${currentTheme.text} placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all text-base`}
+                  aria-label="Message input"
+                  onFocus={() => {
+                    // Ensure input is visible on mobile when focused
+                    setTimeout(() => {
+                      const inputContainer = document.querySelector('.input-container');
+                      if (inputContainer) {
+                        inputContainer.scrollIntoView({ behavior: 'smooth', block: 'end' });
                       }
-                    }}
-                    placeholder="Type a message..."
-                    className={`flex-1 p-4 rounded-lg ${currentTheme.input} ${currentTheme.text} placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all text-base`}
-                    aria-label="Message input"
+                    }, 100);
+                  }}
+                />
+                <Tooltip label="Send Message" placement="top">
+                  <IconButton
+                    icon={<FaArrowUp />}
+                    onClick={() => sendMessage()}
+                    className="text-purple-300 hover:text-purple-400 transition-colors"
+                    aria-label="Send message"
+                    size="sm"
+                    isDisabled={!messageContent.trim()}
                   />
-                  <Tooltip label="Send Message" placement="top">
-                    <IconButton
-                      icon={<FaArrowUp />}
-                      onClick={() => sendMessage()}
-                      className={`${currentTheme.button} ${currentTheme.text} ${currentTheme.hover} transition-all`}
-                      disabled={messageContent.trim().length === 0}
-                      aria-label="Send message"
-                      size="sm"
-                    />
-                  </Tooltip>
-                </>
-              )}
-            </HStack>
-          </>
-        ) : (
-          <Flex className="flex-1 items-center justify-center">
-            <Text className="text-gray-300 text-xl font-medium">Select a friend to start chatting!</Text>
-          </Flex>
-        )}
-      </Box>
-      <Modal isOpen={isDeleteOpen} onClose={onDeleteClose} size="sm">
-        <ModalOverlay />
-        <ModalContent className="modal-content">
-          <ModalHeader className={`modal-header ${currentTheme.modalHeader}`}>Delete Message</ModalHeader>
-          <ModalBody className="modal-body">
-            <Text className={`${currentTheme.text} text-base`}>Are you sure you want to delete this message?</Text>
-          </ModalBody>
-          <ModalFooter className="modal-footer">
-            <Button
-              onClick={onDeleteClose}
-              className="text-purple-300 hover:text-purple-400 transition-colors mr-3 text-sm font-medium"
-              aria-label="Cancel delete"
+                </Tooltip>
+              </>
+            )}
+          </HStack>
+        </>
+      ) : (
+        <Flex flex={1} justify="center" align="center" className={currentTheme.secondary}>
+          <VStack spacing={6}>
+            <Text className={`text-3xl font-bold ${currentTheme.text} drop-shadow-lg`}>
+              Select a conversation to start chatting!
+            </Text>
+            <MotionButton
+              onClick={() => setIsSidebarOpen(true)}
+              className={`p-4 ${currentTheme.button} ${currentTheme.text} rounded-lg ${currentTheme.hover} transition-all text-base font-semibold`}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              aria-label="Open sidebar"
             >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => deleteMessage(showDeleteModal)}
-              className="bg-red-500 hover:bg-red-600 text-white transition-colors text-sm font-medium"
-              aria-label="Confirm delete"
-            >
-              Delete
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-      <Modal isOpen={isConvDeleteOpen} onClose={onConvDeleteClose} size="sm">
-        <ModalOverlay />
-        <ModalContent className="modal-content">
-          <ModalHeader className={`modal-header ${currentTheme.modalHeader}`}>Delete Conversation</ModalHeader>
-          <ModalBody className="modal-body">
-            <Text className={`${currentTheme.text} text-base`}>Are you sure you want to delete the conversation with {showDeleteConversationModal}?</Text>
-          </ModalBody>
-          <ModalFooter className="modal-footer">
-            <Button
-              onClick={onConvDeleteClose}
-              className="text-purple-300 hover:text-purple-400 transition-colors mr-3 text-sm font-medium"
-              aria-label="Cancel delete conversation"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => deleteConversation(showDeleteConversationModal)}
-              className="bg-red-500 hover:bg-red-600 text-white transition-colors text-sm font-medium"
-              aria-label="Confirm delete conversation"
-            >
-              Delete
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-      <Modal isOpen={isImageOpen} onClose={onImageClose} size="xl">
-        <ModalOverlay />
-        <ModalContent className="modal-content bg-transparent">
-          <ModalBody className="modal-body p-0">
-            <Image src={expandedImage} alt="Expanded chat image" className="w-full rounded-lg shadow-2xl" />
-          </ModalBody>
-          <ModalFooter className="modal-footer">
-            <Button
-              onClick={onImageClose}
-              className="text-purple-300 hover:text-purple-400 transition-colors text-sm font-medium"
-              aria-label="Close image"
-            >
-              Close
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-      <Modal isOpen={isFriendRequestsOpen} onClose={onFriendRequestsClose} size="md">
-        <ModalOverlay />
-        <ModalContent className="modal-content">
-          <ModalHeader className={`modal-header ${currentTheme.modalHeader}`}>Friend Requests</ModalHeader>
-          <ModalBody className="modal-body">
+              Open Friends
+            </MotionButton>
+          </VStack>
+        </Flex>
+      )}
+    </Box>
+
+    {/* Delete Message Modal */}
+    <Modal isOpen={isDeleteOpen} onClose={onDeleteClose} isCentered>
+      <ModalOverlay />
+      <ModalContent className="modal-content bg-gray-800 text-white">
+        <ModalHeader className={`modal-header ${currentTheme.modalHeader}`}>
+          Confirm Delete
+        </ModalHeader>
+        <ModalBody className="modal-body">
+          Are you sure you want to delete this message? This action cannot be undone.
+        </ModalBody>
+        <ModalFooter className="modal-footer">
+          <Button
+            onClick={onDeleteClose}
+            className="text-purple-300 hover:text-purple-400 transition-colors mr-4"
+            aria-label="Cancel delete"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={() => deleteMessage(showDeleteModal)}
+            className="text-red-400 hover:text-red-500 transition-colors"
+            aria-label="Confirm delete"
+          >
+            Delete
+          </Button>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
+
+    {/* Delete Conversation Modal */}
+    <Modal isOpen={!!showDeleteConversationModal} onClose={onConvDeleteClose} isCentered>
+      <ModalOverlay />
+      <ModalContent className="modal-content bg-gray-800 text-white">
+        <ModalHeader className={`modal-header ${currentTheme.modalHeader}`}>
+          Delete Conversation
+        </ModalHeader>
+        <ModalBody className="modal-body">
+          Are you sure you want to delete your conversation with {showDeleteConversationModal}? This action cannot be undone.
+        </ModalBody>
+        <ModalFooter className="modal-footer">
+          <Button
+            onClick={onConvDeleteClose}
+            className="text-purple-300 hover:text-purple-400 transition-colors mr-4"
+            aria-label="Cancel delete conversation"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={() => deleteConversation(showDeleteConversationModal)}
+            className="text-red-400 hover:text-red-500 transition-colors"
+            aria-label="Confirm delete conversation"
+          >
+            Delete
+          </Button>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
+
+    {/* Friend Requests Modal */}
+    <Modal isOpen={isFriendRequestsOpen} onClose={onFriendRequestsClose} isCentered size="lg">
+      <ModalOverlay />
+      <ModalContent className="modal-content bg-gray-800 text-white">
+        <ModalHeader className={`modal-header ${currentTheme.modalHeader}`}>
+          Friend Requests
+        </ModalHeader>
+        <ModalBody className="modal-body">
+          {friendRequests.length === 0 ? (
+            <Text className="text-gray-300 text-center">No pending friend requests.</Text>
+          ) : (
             <VStack spacing={4}>
-              {friendRequests.length > 0 ? (
-                friendRequests.map(req => (
+              {friendRequests
+                .filter(req => req.status === 'pending' && req.recipient_username === currentUsername)
+                .map(req => (
                   <MotionBox
                     key={req.id}
                     className="p-4 bg-white/10 rounded-xl w-full friend-request-item border border-white/25"
                     whileHover={{ scale: 1.02 }}
                   >
                     <Flex justify="space-between" align="center">
-                      <Text className={`${currentTheme.text} text-base`}>
-                        {req.sender_username} wants to be your friend
+                      <Text className={`font-medium ${currentTheme.text} text-base`}>
+                        {req.sender_username}
                       </Text>
-                      {req.status === 'pending' && req.recipient_username === currentUsername && (
-                        <HStack spacing={3}>
-                          <Tooltip label="Accept Friend Request" placement="top">
-                            <IconButton
-                              icon={<FaCheck />}
-                              onClick={() => respondFriendRequest(req.id, true)}
-                              className="text-emerald-400 hover:text-emerald-500 transition-colors"
-                              aria-label={`Accept friend request from ${req.sender_username}`}
-                              size="sm"
-                            />
-                          </Tooltip>
-                          <Tooltip label="Reject Friend Request" placement="top">
-                            <IconButton
-                              icon={<FaTimes />}
-                              onClick={() => respondFriendRequest(req.id, false)}
-                              className="text-red-400 hover:text-red-500 transition-colors"
-                              aria-label={`Reject friend request from ${req.sender_username}`}
-                              size="sm"
-                            />
-                          </Tooltip>
-                        </HStack>
-                      )}
+                      <HStack spacing={3}>
+                        <Tooltip label="Accept Friend Request" placement="top">
+                          <IconButton
+                            icon={<FaCheck />}
+                            onClick={() => respondFriendRequest(req.id, true)}
+                            className="text-emerald-400 hover:text-emerald-500 transition-colors"
+                            aria-label={`Accept friend request from ${req.sender_username}`}
+                            size="sm"
+                          />
+                        </Tooltip>
+                        <Tooltip label="Reject Friend Request" placement="top">
+                          <IconButton
+                            icon={<FaTimes />}
+                            onClick={() => respondFriendRequest(req.id, false)}
+                            className="text-red-400 hover:text-red-500 transition-colors"
+                            aria-label={`Reject friend request from ${req.sender_username}`}
+                            size="sm"
+                          />
+                        </Tooltip>
+                      </HStack>
                     </Flex>
                   </MotionBox>
-                ))
-              ) : (
-                <Text className="text-gray-300 text-base text-center">No friend requests at the moment.</Text>
-              )}
+                ))}
             </VStack>
-          </ModalBody>
-          <ModalFooter className="modal-footer">
-            <Button
-              onClick={onFriendRequestsClose}
-              className="text-purple-300 hover:text-purple-400 transition-colors text-sm font-medium"
-              aria-label="Close friend requests"
-            >
-              Close
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-    </div>
-  );
+          )}
+        </ModalBody>
+        <ModalFooter className="modal-footer">
+          <Button
+            onClick={onFriendRequestsClose}
+            className="text-purple-300 hover:text-purple-400 transition-colors"
+            aria-label="Close friend requests"
+          >
+            Close
+          </Button>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
+
+    {/* Expanded Image Modal */}
+    <Modal isOpen={isImageOpen} onClose={onImageClose} isCentered size="xl">
+      <ModalOverlay />
+      <ModalContent className="modal-content bg-gray-800">
+        <ModalBody className="modal-body p-0">
+          <Image src={expandedImage} alt="Expanded chat image" className="w-full h-auto rounded-lg" />
+        </ModalBody>
+        <ModalFooter className="modal-footer">
+          <Button
+            onClick={onImageClose}
+            className="text-purple-300 hover:text-purple-400 transition-colors"
+            aria-label="Close image"
+          >
+            Close
+          </Button>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
+  </div>
+);
 }
 
 export default App;
