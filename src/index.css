@@ -119,15 +119,16 @@ code {
   scroll-behavior: smooth;
   height: calc(100vh - 140px); /* Default height for desktop */
   margin-bottom: 60px; /* Space for input container */
+  padding-bottom: env(safe-area-inset-bottom); /* Ensure content isn’t hidden */
 }
 
 /* Input container styling */
 .input-container {
   position: fixed;
-  bottom: 0;
+  bottom: env(safe-area-inset-bottom, 0);
   left: 0;
   right: 0;
-  z-index: 30;
+  z-index: 1000; /* High z-index to stay on top */
   background: rgba(255, 255, 255, 0.12);
   backdrop-filter: blur(15px);
   border-top: 1px solid rgba(255, 255, 255, 0.25);
@@ -139,14 +140,7 @@ code {
   min-height: 60px;
 }
 
-/* Handle virtual keyboard on mobile */
-@supports (-webkit-touch-callout: none) {
-  .input-container {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-}
-
-/* Responsive adjustments */
+/* Mobile-specific adjustments */
 @media (max-width: 768px) {
   .message-bubble {
     max-width: 85%;
@@ -154,14 +148,16 @@ code {
 
   .chat-container {
     padding: 8px;
-    height: calc(100vh - 120px); /* Adjusted for mobile */
+    height: calc(100dvh - 120px); /* Dynamic viewport height for mobile */
     margin-bottom: 50px;
+    padding-bottom: calc(env(safe-area-inset-bottom) + 50px); /* Extra padding for keyboard */
   }
 
   .input-container {
     padding: 6px 8px;
     min-height: 50px;
     border-radius: 16px 16px 0 0;
+    bottom: env(safe-area-inset-bottom, 0); /* Stick to bottom with safe area */
   }
 
   .input-container input {
