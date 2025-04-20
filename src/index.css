@@ -83,7 +83,7 @@ html, body, #root {
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
   padding-top: 0 !important; /* Space for header */
-  padding-bottom: 100px; /* Ensure space for input bar */
+  padding-bottom: 80px; /* Match input container height to prevent overlap */
   min-height: 0; /* Allow flex child to shrink */
   display: flex;
   flex-direction: column;
@@ -113,6 +113,7 @@ html, body, #root {
   z-index: 60;
   display: flex;
   align-items: center;
+  flex-direction: row; /* Ensure horizontal layout by default */
   transition: transform 0.3s ease, opacity 0.3s ease;
   visibility: visible; /* Always visible */
 }
@@ -271,23 +272,25 @@ html, body, #root {
 
   .chat-container {
     padding-top: 64px !important;
-    padding-bottom: 80px !important; /* Adjusted for mobile input */
+    padding-bottom: 80px !important; /* Match input container height */
   }
 
   .input-container {
-    flex-direction: column !important;
+    flex-direction: row !important; /* Horizontal layout on mobile */
     padding: 8px !important;
-    height: auto !important;
-    min-height: 80px !important;
+    height: 80px !important; /* Fixed height for consistency */
+    align-items: center !important; /* Center items vertically */
   }
 
-  .input-container input {
-    width: 100% !important;
-    margin-bottom: 8px !important;
+  .input-container textarea {
+    flex: 1 !important; /* Allow textarea to grow */
+    margin-right: 8px !important; /* Space between textarea and buttons */
+    max-height: 60px !important; /* Limit textarea height */
   }
 
   .input-container button {
-    width: 100% !important;
+    width: auto !important; /* Allow buttons to size naturally */
+    margin-left: 4px !important;
   }
 
   .message-bubble {
@@ -306,6 +309,7 @@ html, body, #root {
     height: 60px;
     min-height: 60px;
     padding: 8px 12px;
+    flex-direction: row; /* Horizontal layout in landscape */
   }
 
   .chat-container {
