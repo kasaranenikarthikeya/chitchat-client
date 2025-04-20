@@ -115,23 +115,26 @@ code {
 /* Chat container */
 .chat-container {
   overflow-x: hidden !important;
-  overflow-y: auto;
+  overflow-y: auto !important;
   scroll-behavior: smooth;
-  padding-top: 70px; /* Reserve space for header */
-  padding-bottom: calc(env(safe-area-inset-bottom) + 80px); /* Reserve space for input bar */
-  height: calc(100dvh - 130px); /* Adjusted for header and input */
-  margin-bottom: 0; /* Remove margin to prevent overlap */
+  padding: 16px;
+  height: calc(100dvh - 140px); /* Adjusted for header (60px) and input (80px) */
+  margin: 0;
+  position: relative;
+  box-sizing: border-box;
 }
 
 /* Header container */
 .header-container {
   position: sticky;
   top: 0;
-  z-index: 1500; /* Below input container but above content */
+  z-index: 1500;
   background: rgba(255, 255, 255, 0.12);
   backdrop-filter: blur(15px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.25);
   padding: 12px 16px;
+  height: 60px;
+  box-sizing: border-box;
 }
 
 /* Input container */
@@ -140,16 +143,16 @@ code {
   bottom: env(safe-area-inset-bottom, 0);
   left: 0;
   right: 0;
-  z-index: 2000; /* High z-index to stay on top */
+  z-index: 2000;
   background: rgba(255, 255, 255, 0.12);
   backdrop-filter: blur(15px);
   border-top: 1px solid rgba(255, 255, 255, 0.25);
   padding: 10px 14px;
-  border-radius: 20px 20px 0 0;
+  height: 80px;
   box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.2);
   display: flex;
   align-items: center;
-  min-height: 60px;
+  box-sizing: border-box;
 }
 
 /* Sidebar container */
@@ -163,27 +166,36 @@ code {
   backdrop-filter: blur(15px);
 }
 
+/* Message bubble */
+.message-bubble {
+  max-width: 75%;
+  margin: 8px 12px;
+  padding: 10px 16px;
+  border-radius: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(12px);
+}
+
 /* Mobile-specific adjustments */
 @media (max-width: 768px) {
   .message-bubble {
-    max-width: 85%;
+    max-width: 80%;
   }
 
   .chat-container {
-    padding: 8px;
-    padding-top: 60px; /* Adjusted for smaller header */
-    padding-bottom: calc(env(safe-area-inset-bottom) + 70px);
-    height: calc(100dvh - 110px); /* Tighter for mobile */
+    padding: 12px;
+    height: calc(100dvh - 130px); /* Adjusted for smaller header (50px) and input (80px) */
   }
 
   .header-container {
     padding: 10px 12px;
+    height: 50px;
   }
 
   .input-container {
     padding: 8px 10px;
-    min-height: 50px;
-    border-radius: 16px 16px 0 0;
+    height: 80px;
+    border-radius: 0;
   }
 
   .input-container input {
@@ -206,19 +218,37 @@ code {
   }
 }
 
+/* Tablet adjustments */
 @media (min-width: 641px) and (max-width: 1024px) {
   .chat-container {
-    padding-top: 65px;
-    padding-bottom: calc(env(safe-area-inset-bottom) + 75px);
-    height: calc(100dvh - 120px);
+    padding: 14px;
+    height: calc(100dvh - 135px); /* Adjusted for header (55px) and input (80px) */
   }
 
   .header-container {
     padding: 12px 14px;
+    height: 55px;
   }
 
   .input-container {
     padding: 8px 16px;
-    min-height: 56px;
+    height: 80px;
+  }
+}
+
+/* Landscape mode adjustments */
+@media (max-height: 500px) {
+  .chat-container {
+    height: calc(100dvh - 120px); /* Reduced height for landscape */
+  }
+
+  .header-container {
+    height: 50px;
+    padding: 8px 12px;
+  }
+
+  .input-container {
+    height: 70px;
+    padding: 8px 10px;
   }
 }
