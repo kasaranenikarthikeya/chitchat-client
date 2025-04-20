@@ -61,6 +61,7 @@ function App() {
   const audioRefs = useRef({});
   const sidebarRef = useRef(null);
   const resizeRef = useRef(null);
+  const headerRef = useRef(null);
   const toast = useToast();
   const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
   const { isOpen: isConvDeleteOpen, onClose: onConvDeleteClose } = useDisclosure();
@@ -878,6 +879,25 @@ function App() {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  // Dynamic header adjustment for address bar
+  const adjustHeaderPadding = useCallback(() => {
+    if (headerRef.current) {
+      const topInset = Math.max(window.innerHeight - document.documentElement.clientHeight, 0);
+      headerRef.current.style.paddingTop = `${topInset + 80}px`; // Increased base padding to 80px for better visibility
+    }
+  }, []);
+
+  useEffect(() => {
+    const debouncedAdjust = debounce(adjustHeaderPadding, 100);
+    adjustHeaderPadding(); // Initial adjustment
+    window.addEventListener('resize', debouncedAdjust);
+    window.addEventListener('scroll', debouncedAdjust);
+    return () => {
+      window.removeEventListener('resize', debouncedAdjust);
+      window.removeEventListener('scroll', debouncedAdjust);
+    };
+  }, [adjustHeaderPadding]);
+
   if (!token) {
     return (
       <div className={`min-h-screen flex items-center justify-center ${currentTheme.primary} p-4 font-sans`}>
@@ -1174,15 +1194,18 @@ function App() {
           </VStack>
         )}
       </MotionBox>
-      <Box className={`flex-1 flex flex-col ${currentTheme.secondary}`}>
+      <Box className={`flex-1 flex flex-col ${currentTheme.secondary} overflow-hidden`}>
         {selectedUser ? (
           <>
             <Flex
-              className={`header-container ${currentTheme.secondary}`}
-              justify="space-between"
-              align="center"
+              ref={headerRef}
+              className={`header-container ${currentTheme.secondary} fixed top-0 left-0 right-0 z-50 min-h-[100px] p-6 justify-between items-center shadow-lg border-b border-white/10`}
+              style={{ paddingTop: '80px' }} // Increased padding for full visibility
+              initial={{ y: -100 }}
+              animate={{ y: 0 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
             >
-              <HStack spacing={3}>
+              <HStack spacing={4}>
                 <Tooltip label="Back to Conversations" placement="right">
                   <MotionButton
                     as={IconButton}
@@ -1198,9 +1221,9 @@ function App() {
                     whileTap={{ scale: 0.9 }}
                   />
                 </Tooltip>
-                <Avatar name={selectedUser} className="bg-gradient-to-r from-pink-500 to-purple-500 w-10 h-10 ring-2 ring-white/30" />
+                <Avatar name={selectedUser} className="bg-gradient-to-r from-pink-500 to-purple-500 w-12 h-12 ring-2 ring-white/30" />
                 <VStack align="start" spacing={0}>
-                  <Text className={`font-semibold ${currentTheme.text} text-lg truncate max-w-[200px]`}>{selectedUser}</Text>
+                  <Text className={`font-semibold ${currentTheme.text} text-xl whitespace-normal break-words max-w-[200px]`}>{selectedUser}</Text>
                   <Text className={`text-sm ${onlineUsers[selectedUser] ? 'text-emerald-300' : 'text-gray-400'}`}>
                     {onlineUsers[selectedUser] ? 'Online' : lastSeen[selectedUser] ? `Last seen ${formatLastSeen(lastSeen[selectedUser])}` : 'Offline'}
                   </Text>
@@ -1216,7 +1239,11 @@ function App() {
                 </Button>
               </Tooltip>
             </Flex>
-            <Box ref={chatContainerRef} className="chat-container">
+            <Box
+              ref={chatContainerRef}
+              className="chat-container pt-[100px] pb-20 flex-1 overflow-y-auto"
+              style={{ paddingBottom: '80px' }} // Ensure space for input bar
+            >
               {isInitialLoad ? (
                 <VStack spacing={4} p={4}>
                   {[...Array(5)].map((_, i) => (
@@ -1381,7 +1408,10 @@ function App() {
                 </VStack>
               )}
             </Box>
-            <HStack className={`input-container ${currentTheme.secondary}`} spacing={3}>
+            <HStack
+              className={`input-container ${currentTheme.secondary} fixed bottom-0 left-0 right-0 z-60 p-4 shadow-lg border-t border-white/10`}
+              style={{ minHeight: '80px' }} // Fixed height to prevent collapse
+            >
               {isRecording ? (
                 <HStack w="full" spacing={4}>
                   <Text className="text-red-400 font-semibold text-sm">{formatTime(recordingTime)}</Text>
