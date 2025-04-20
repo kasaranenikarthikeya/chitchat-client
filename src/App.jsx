@@ -1721,14 +1721,13 @@ function App() {
                   className={`flex-1 p-4 rounded-lg ${currentTheme.input} ${currentTheme.text} placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all text-base`}
                   aria-label="Message input"
                   onFocus={() => {
-                    // Ensure input is visible on mobile when focused
                     setTimeout(() => {
                       const inputContainer = inputContainerRef.current;
                       if (inputContainer) {
                         inputContainer.scrollIntoView({ behavior: 'smooth', block: 'end' });
-                        window.scrollTo(0, document.body.scrollHeight); // Force scroll to bottom
+                        window.scrollTo(0, document.body.scrollHeight);
                       }
-                    }, 300); // Delay to account for keyboard animation
+                    }, 300);
                   }}
                 />
                 <Tooltip label="Send Message" placement="top">
