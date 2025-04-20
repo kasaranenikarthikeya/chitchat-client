@@ -952,10 +952,10 @@ function App() {
     html, body, #root {
       height: 100vh;
       width: 100vw;
-      overflow: hidden;
       margin: 0;
       padding: 0;
       font-family: 'Inter', sans-serif;
+      overflow: hidden;
     }
     * {
       box-sizing: border-box;
@@ -996,7 +996,8 @@ function App() {
       scroll-behavior: smooth;
       overflow-x: hidden;
       overflow-y: auto;
-      height: calc(100vh - 120px); /* Adjusted for desktop to leave space for input */
+      min-height: calc(100vh - 140px); /* Use min-height to avoid overflow */
+      max-height: calc(100vh - 140px); /* Ensure it doesn't push input off */
       scrollbar-width: thin;
       scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
     }
@@ -1104,13 +1105,15 @@ function App() {
     .input-container {
       border-radius: 30px;
       box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-      background: rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.15);
       backdrop-filter: blur(15px);
       border: 1px solid rgba(255, 255, 255, 0.25);
       position: sticky;
       bottom: 0;
-      z-index: 100; /* Increased z-index */
-      overflow: visible; /* Prevent clipping */
+      z-index: 1000; /* Extremely high z-index */
+      overflow: visible;
+      width: 100%;
+      padding: 10px;
     }
     .new-message {
       animation: slideIn 0.4s ease;
@@ -1149,6 +1152,9 @@ function App() {
       padding: 16px 24px;
       border-top: 1px solid rgba(255, 255, 255, 0.1);
     }
+    .flex-1 {
+      overflow: visible !important; /* Prevent parent from clipping input */
+    }
     @media (max-width: 640px) {
       .sidebar-container {
         position: fixed;
@@ -1170,23 +1176,28 @@ function App() {
         display: none;
       }
       .chat-container {
-        height: calc(100vh - 100px); /* Simplified and reduced for mobile */
-        margin-bottom: 80px; /* Extra space for input container */
+        min-height: calc(100vh - 80px); /* Adjusted for mobile */
+        max-height: calc(100vh - 80px);
+        margin-bottom: 80px; /* Space for input container */
         overflow-y: auto;
         overflow-x: hidden;
       }
       .input-container {
         position: fixed;
-        bottom: env(safe-area-inset-bottom, 0px); /* Respect safe areas */
+        bottom: 0; /* Fallback */
+        bottom: calc(0px + env(safe-area-inset-bottom, 0px)); /* Safe area support */
         left: 0;
         right: 0;
-        z-index: 200; /* Very high z-index to ensure visibility */
-        padding: 10px;
-        background: rgba(255, 255, 255, 0.2); /* Slightly more opaque for visibility */
-        backdrop-filter: blur(15px);
-        border-top: 1px solid rgba(255, 255, 255, 0.3);
-        overflow: visible; /* Ensure no clipping */
-        min-height: 60px; /* Minimum height for visibility */
+        width: 100vw; /* Full viewport width */
+        height: 70px; /* Fixed height for consistency */
+        z-index: 2000; /* Higher z-index */
+        padding: 8px;
+        background: #ff4d4d; /* Bright red for debugging visibility */
+        border: 2px solid yellow; /* Debugging border */
+        border-top: 1px solid rgba(255, 255, 255, 0.5);
+        overflow: visible;
+        display: flex; /* Ensure children are visible */
+        align-items: center;
       }
       .message-bubble {
         max-width: 80%;
@@ -1209,6 +1220,10 @@ function App() {
       }
       .sidebar-mobile-nav {
         display: none;
+      }
+      .input-container {
+        background: rgba(255, 255, 255, 0.15); /* Restore original background for desktop */
+        border: 1px solid rgba(255, 255, 255, 0.25); /* Remove debug border */
       }
     }
   `}
@@ -1880,6 +1895,5 @@ function App() {
     </div>
   );
 }
-
 
 export default App;
