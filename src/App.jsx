@@ -58,8 +58,8 @@ function App() {
   const { isOpen: isImageOpen, onOpen: onImageOpen, onClose: onImageClose } = useDisclosure();
   const { isOpen: isFriendRequestsOpen, onOpen: onFriendRequestsOpen, onClose: onFriendRequestsClose } = useDisclosure();
 
-  const apiUrl = 'https://chitchat-f4e6.onrender.com';
-  const wsUrl = 'wss://chitchat-f4e6.onrender.com/ws';
+  const apiUrl = 'https://chitchat-server-emw5.onrender.com';
+  const wsUrl = 'wss://chitchat-server-emw5.onrender.com/ws';
 
   const primaryBg = useColorModeValue('#F7FAFC', '#0D0D0D');
   const secondaryBg = useColorModeValue('#EDF2F7', '#1C1C1C');
