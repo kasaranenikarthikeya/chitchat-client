@@ -1018,8 +1018,10 @@ function App() {
             position: sticky;
             top: 0;
             z-index: 1500;
-            padding: 16px;
+            padding: 12px 16px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(15px);
           }
           .chat-container {
             flex: 1;
@@ -1043,6 +1045,10 @@ function App() {
             padding: 12px 16px;
             z-index: 2000;
             border-top: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(15px);
+            border-radius: 20px 20px 0 0;
+            box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.2);
           }
           .typing-dots span {
             animation: typing 1s infinite;
@@ -1239,6 +1245,9 @@ function App() {
               font-size: 0.8rem;
               padding: 6px 12px;
             }
+            .header-container {
+              padding: 10px 12px;
+            }
           }
           @media (min-width: 641px) {
             .sidebar-container {
@@ -1354,7 +1363,7 @@ function App() {
                   {[...Array(3)].map((_, i) => (
                     <Skeleton key={i} height="60px" w="full" borderRadius="xl" />
                   ))}
-                </VStack>
+              </VStack>
               ) : isLoading && !isInitialLoad ? (
                 <Text className="text-gray-300 text-sm text-center">Loading chats...</Text>
               ) : (
@@ -1484,18 +1493,28 @@ function App() {
               className={`header-container ${currentTheme.secondary}`}
               justify="space-between"
               align="center"
+              px={4}
+              py={3}
+              zIndex={1500}
             >
-              <HStack spacing={4}>
-                <IconButton
-                  icon={<FaBars />}
-                  onClick={() => setIsSidebarOpen(true)}
-                  className="text-purple-300 hover:text-purple-400 transition-colors"
-                  aria-label="Open sidebar"
-                  size="sm"
-                />
-                <Avatar name={selectedUser} className="bg-gradient-to-r from-pink-500 to-purple-500 w-12 h-12 ring-2 ring-white/30" />
+              <HStack spacing={3}>
+                <Tooltip label="Back to Conversations" placement="right">
+                  <IconButton
+                    icon={<FaChevronLeft />}
+                    onClick={() => {
+                      setSelectedUser(null);
+                      setIsSidebarOpen(true);
+                    }}
+                    className="text-purple-300 hover:text-purple-400 transition-colors"
+                    aria-label="Back to conversations"
+                    size="sm"
+                  />
+                </Tooltip>
+                <Avatar name={selectedUser} className="bg-gradient-to-r from-pink-500 to-purple-500 w-10 h-10 ring-2 ring-white/30" />
                 <VStack align="start" spacing={1}>
-                  <Text className={`font-semibold ${currentTheme.text} text-lg`}>{selectedUser}</Text>
+                  <Text className={`font-semibold ${currentTheme.text} text-lg truncate`} maxW="200px">
+                    {selectedUser}
+                  </Text>
                   <Text className={`text-sm ${onlineUsers[selectedUser] ? 'text-emerald-300' : 'text-gray-400'}`}>
                     {onlineUsers[selectedUser] ? 'Online' : lastSeen[selectedUser] ? `Last seen ${formatLastSeen(lastSeen[selectedUser])}` : 'Offline'}
                   </Text>
@@ -1764,18 +1783,27 @@ function App() {
                     className={`flex-1 p-4 rounded-lg ${currentTheme.input} ${currentTheme.text} placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all text-base`}
                     aria-label="Message input"
                     onFocus={() => {
-                      setTimeout(() =>
-                    scrollToBottom(), 300);
+                      setTimeout(() => {
+                        const inputContainer = inputContainerRef.current;
+                        if (inputContainer) {
+                          inputContainer.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                          window.scrollTo(0, document.body.scrollHeight);
+                        }
+                      }, 400); // Delay to account for keyboard appearance
                     }}
                   />
                   <Tooltip label="Send Message" placement="top">
                     <IconButton
                       icon={<FaArrowUp />}
                       onClick={() => sendMessage()}
-                      className="text-purple-300 hover:text-purple-400 transition-colors"
+                      isDisabled={!messageContent.trim()}
+                      className={`${
+                        messageContent.trim()
+                          ? 'text-purple-300 hover:text-purple-400'
+                          : 'text-gray-500 cursor-not-allowed'
+                      } transition-colors`}
                       aria-label="Send message"
                       size="sm"
-                      isDisabled={!messageContent.trim()}
                     />
                   </Tooltip>
                 </>
@@ -1783,113 +1811,133 @@ function App() {
             </HStack>
           </>
         ) : (
-          <Flex flex={1} justify="center" align="center" className={`${currentTheme.secondary}`}>
-            <VStack spacing={6}>
-              <Text className={`text-2xl font-semibold ${currentTheme.text}`}>
-                Select a conversation to start chatting!
+          <Flex
+            ref={headerContainerRef}
+            className={`header-container ${currentTheme.secondary}`}
+            justify="space-between"
+            align="center"
+            px={4}
+            py={3}
+            zIndex={1500}
+          >
+            <HStack spacing={3}>
+              <Tooltip label="Open Sidebar" placement="right">
+                <IconButton
+                  icon={<FaBars />}
+                  onClick={() => setIsSidebarOpen(true)}
+                  className="text-purple-300 hover:text-purple-400 transition-colors"
+                  aria-label="Open sidebar"
+                  size="sm"
+                />
+              </Tooltip>
+              <Text className={`font-semibold ${currentTheme.text} text-lg`}>
+                Select a conversation
               </Text>
-              <IconButton
-                icon={<FaBars />}
-                onClick={() => setIsSidebarOpen(true)}
-                className="text-purple-300 hover:text-purple-400 transition-colors"
-                aria-label="Open sidebar"
-                size="lg"
-              />
-            </VStack>
+            </HStack>
+            <HStack spacing={3}>
+              <Tooltip label="View Friend Requests" placement="left">
+                <Button
+                  onClick={onFriendRequestsOpen}
+                  className="text-purple-300 hover:text-purple-400 transition-colors text-sm font-medium"
+                  aria-label="View friend requests"
+                >
+                  Friend Requests {friendRequestCount > 0 && `(${friendRequestCount})`}
+                </Button>
+              </Tooltip>
+            </HStack>
           </Flex>
         )}
       </Box>
 
       {/* Delete Message Modal */}
-      <Modal isOpen={isDeleteOpen} onClose={onDeleteClose} isCentered>
+      <Modal isOpen={isDeleteOpen} onClose={onDeleteClose} size="sm">
         <ModalOverlay />
-        <ModalContent className="modal-content bg-gray-900/95 backdrop-blur-3xl border border-white/25">
+        <ModalContent className="modal-content bg-gray-800 text-white">
           <ModalHeader className={`modal-header ${currentTheme.modalHeader}`}>
             Delete Message
           </ModalHeader>
           <ModalBody className="modal-body">
-            <Text className={`${currentTheme.text} text-base`}>
+            <Text className="text-base">
               Are you sure you want to delete this message? This action cannot be undone.
             </Text>
           </ModalBody>
           <ModalFooter className="modal-footer">
-            <HStack spacing={4}>
-              <Button
-                onClick={onDeleteClose}
-                className="text-purple-300 hover:text-purple-400 transition-colors"
-                aria-label="Cancel delete"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={() => deleteMessage(showDeleteModal)}
-                className="text-red-400 hover:text-red-500 transition-colors font-medium"
-                aria-label="Confirm delete"
-              >
-                Delete
-              </Button>
-            </HStack>
+            <Button
+              onClick={onDeleteClose}
+              className="text-purple-300 hover:text-purple-400 transition-colors mr-3"
+              aria-label="Cancel delete"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => deleteMessage(showDeleteModal)}
+              className="text-red-400 hover:text-red-500 transition-colors"
+              aria-label="Confirm delete"
+            >
+              Delete
+            </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
 
       {/* Delete Conversation Modal */}
-      <Modal isOpen={!!showDeleteConversationModal} onClose={onConvDeleteClose} isCentered>
+      <Modal isOpen={!!showDeleteConversationModal} onClose={onConvDeleteClose} size="sm">
         <ModalOverlay />
-        <ModalContent className="modal-content bg-gray-900/95 backdrop-blur-3xl border border-white/25">
+        <ModalContent className="modal-content bg-gray-800 text-white">
           <ModalHeader className={`modal-header ${currentTheme.modalHeader}`}>
             Delete Conversation
           </ModalHeader>
           <ModalBody className="modal-body">
-            <Text className={`${currentTheme.text} text-base`}>
-              Are you sure you want to delete your conversation with {showDeleteConversationModal}? This action cannot be undone.
+            <Text className="text-base">
+              Are you sure you want to delete the conversation with {showDeleteConversationModal}? This action cannot be undone.
             </Text>
           </ModalBody>
           <ModalFooter className="modal-footer">
-            <HStack spacing={4}>
-              <Button
-                onClick={onConvDeleteClose}
-                className="text-purple-300 hover:text-purple-400 transition-colors"
-                aria-label="Cancel delete conversation"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={() => deleteConversation(showDeleteConversationModal)}
-                className="text-red-400 hover:text-red-500 transition-colors font-medium"
-                aria-label="Confirm delete conversation"
-              >
-                Delete
-              </Button>
-            </HStack>
+            <Button
+              onClick={onConvDeleteClose}
+              className="text-purple-300 hover:text-purple-400 transition-colors mr-3"
+              aria-label="Cancel delete conversation"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => deleteConversation(showDeleteConversationModal)}
+              className="text-red-400 hover:text-red-500 transition-colors"
+              aria-label="Confirm delete conversation"
+            >
+              Delete
+            </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
 
       {/* Friend Requests Modal */}
-      <Modal isOpen={isFriendRequestsOpen} onClose={onFriendRequestsClose} isCentered size="lg">
+      <Modal isOpen={isFriendRequestsOpen} onClose={onFriendRequestsClose} size="md">
         <ModalOverlay />
-        <ModalContent className="modal-content bg-gray-900/95 backdrop-blur-3xl border border-white/25">
+        <ModalContent className="modal-content bg-gray-800 text-white">
           <ModalHeader className={`modal-header ${currentTheme.modalHeader}`}>
             Friend Requests
           </ModalHeader>
           <ModalBody className="modal-body">
-            {friendRequests.length > 0 ? (
-              <VStack spacing={4} align="stretch">
-                {friendRequests
-                  .filter(req => req.status === 'pending' && req.recipient_username === currentUsername)
-                  .map(req => (
-                    <MotionBox
-                      key={req.id}
-                      className="p-4 bg-white/10 rounded-xl friend-request-item border border-white/25"
-                      whileHover={{ scale: 1.02 }}
-                    >
-                      <Flex justify="space-between" align="center">
-                        <Text className={`${currentTheme.text} text-base font-medium`}>
-                          {req.sender_username}
-                        </Text>
+            {friendRequests.length === 0 ? (
+              <Text className="text-gray-300 text-center text-base">
+                No friend requests at the moment.
+              </Text>
+            ) : (
+              <VStack spacing={4}>
+                {friendRequests.map(req => (
+                  <MotionBox
+                    key={req.id}
+                    className="p-4 bg-white/10 rounded-xl w-full friend-request-item border border-white/25"
+                    whileHover={{ scale: 1.02 }}
+                  >
+                    <Flex justify="space-between" align="center">
+                      <Text className={`font-medium ${currentTheme.text} text-base`}>
+                        {req.sender_username}
+                      </Text>
+                      {req.status === 'pending' && req.recipient_username === currentUsername && (
                         <HStack spacing={3}>
-                          <Tooltip label="Accept friend request" placement="top">
+                          <Tooltip label="Accept Friend Request" placement="top">
                             <IconButton
                               icon={<FaCheck />}
                               onClick={() => respondFriendRequest(req.id, true)}
@@ -1898,7 +1946,7 @@ function App() {
                               size="sm"
                             />
                           </Tooltip>
-                          <Tooltip label="Reject friend request" placement="top">
+                          <Tooltip label="Reject Friend Request" placement="top">
                             <IconButton
                               icon={<FaTimes />}
                               onClick={() => respondFriendRequest(req.id, false)}
@@ -1908,14 +1956,11 @@ function App() {
                             />
                           </Tooltip>
                         </HStack>
-                      </Flex>
-                    </MotionBox>
-                  ))}
+                      )}
+                    </Flex>
+                  </MotionBox>
+                ))}
               </VStack>
-            ) : (
-              <Text className={`${currentTheme.text} text-center text-base`}>
-                No pending friend requests.
-              </Text>
             )}
           </ModalBody>
           <ModalFooter className="modal-footer">
@@ -1931,9 +1976,9 @@ function App() {
       </Modal>
 
       {/* Expanded Image Modal */}
-      <Modal isOpen={isImageOpen} onClose={onImageClose} isCentered size="xl">
+      <Modal isOpen={isImageOpen} onClose={onImageClose} size="xl">
         <ModalOverlay />
-        <ModalContent className="modal-content bg-gray-900/95 backdrop-blur-3xl border border-white/25">
+        <ModalContent className="modal-content bg-gray-800">
           <ModalBody className="modal-body p-0">
             <Image
               src={expandedImage}
