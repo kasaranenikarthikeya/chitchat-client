@@ -1,16 +1,17 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Box, Flex, VStack, HStack, Text, Input, Button, IconButton, Avatar, Badge, Modal, ModalOverlay,
-  ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure, useColorMode, useColorModeValue,
-  SlideFade, Tooltip, useToast, Spinner, Popover, PopoverTrigger, PopoverContent, PopoverBody, Image,
-  Progress, Menu, MenuButton, MenuList, MenuItem, Portal, InputGroup, InputRightElement, Tabs, TabList, Tab, TabPanels, TabPanel,
+  ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure, useToast, SlideFade,
+  Spinner, Popover, PopoverTrigger, PopoverContent, PopoverBody, Image, Menu, MenuButton,
+  MenuList, MenuItem, InputGroup, InputRightElement, Skeleton, SkeletonCircle, SkeletonText,
+  Tooltip
 } from '@chakra-ui/react';
-import { FaPaperPlane, FaPen, FaTrashAlt, FaTimes, FaSearch, FaSmile, FaPaperclip, FaMoon, FaSun, FaMicrophone, FaStop, FaPlay, FaPause, FaUserPlus, FaEllipsisH, FaEye, FaEyeSlash, FaBell, FaCheck, FaUserFriends } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
-import { keyframes } from '@emotion/react';
 import EmojiPicker from 'emoji-picker-react';
 import debounce from 'lodash/debounce';
+import { FaArrowUp, FaPalette, FaHeart, FaStar, FaPaperclip, FaMicrophone, FaBars, FaUserPlus, FaSignOutAlt, FaSmile, FaTrash, FaCheck, FaTimes, FaEdit, FaChevronLeft } from 'react-icons/fa';
 
+// Framer Motion components
 const MotionBox = motion(Box);
 const MotionButton = motion(Button);
 
@@ -29,19 +30,26 @@ function App() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [messageContent, setMessageContent] = useState('');
   const [editingMessage, setEditingMessage] = useState(null);
-  const [showTimestamps, setShowTimestamps] = useState(true);
+  const showTimestamps = true;
   const [showDeleteModal, setShowDeleteModal] = useState(null);
   const [showDeleteConversationModal, setShowDeleteConversationModal] = useState(null);
   const [currentUsername, setCurrentUsername] = useState(localStorage.getItem('username') || '');
   const [isSocketConnected, setIsSocketConnected] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState({});
-  const [isTyping, setIsTyping] = useState(false);
+  const [typingUsers, setTypingUsers] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [expandedImage, setExpandedImage] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState(null);
   const [recordingTime, setRecordingTime] = useState(0);
   const [playingAudio, setPlayingAudio] = useState(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [sidebarWidth, setSidebarWidth] = useState(localStorage.getItem('sidebarWidth') ? parseInt(localStorage.getItem('sidebarWidth'), 10) : 320);
+  const [theme, setTheme] = useState('neon');
+  const [pinnedMessages, setPinnedMessages] = useState([]);
+  const [queuedMessages, setQueuedMessages] = useState([]);
+  const [lastSeen, setLastSeen] = useState({});
   const messagesEndRef = useRef(null);
   const socketRef = useRef(null);
   const observerRef = useRef(null);
@@ -51,52 +59,311 @@ function App() {
   const audioChunksRef = useRef([]);
   const recordingTimerRef = useRef(null);
   const audioRefs = useRef({});
+  const sidebarRef = useRef(null);
+  const resizeRef = useRef(null);
   const toast = useToast();
-  const { colorMode, toggleColorMode } = useColorMode();
   const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
-  const { isOpen: isConvDeleteOpen, onOpen: onConvDeleteOpen, onClose: onConvDeleteClose } = useDisclosure();
+  const { isOpen: isConvDeleteOpen, onClose: onConvDeleteClose } = useDisclosure();
   const { isOpen: isImageOpen, onOpen: onImageOpen, onClose: onImageClose } = useDisclosure();
   const { isOpen: isFriendRequestsOpen, onOpen: onFriendRequestsOpen, onClose: onFriendRequestsClose } = useDisclosure();
 
   const apiUrl = 'https://chitchat-server-emw5.onrender.com';
   const wsUrl = 'wss://chitchat-server-emw5.onrender.com/ws';
 
-  const primaryBg = useColorModeValue('#F7FAFC', '#0D0D0D');
-  const secondaryBg = useColorModeValue('#EDF2F7', '#1C1C1C');
-  const primaryText = useColorModeValue('#1A202C', '#FFFFFF');
-  const secondaryText = useColorModeValue('#4A5568', '#A1A1AA');
-  const accentColor = '#00B5D8';
-  const senderBubble = useColorModeValue('#E2E8F0', '#2B2B2B');
-  const receiverBubble = useColorModeValue('linear-gradient(45deg, #00B5D8, #7DF9FF)', 'linear-gradient(45deg, #00B5D8, #7DF9FF)');
-  const notificationBadge = '#F687B3';
-  const successColor = '#00FFAB';
-  const errorColor = '#FF3B30';
+  const themes = {
+    neon: {
+      primary: 'bg-gradient-to-br from-pink-600 via-purple-600 to-indigo-600',
+      secondary: 'bg-gradient-to-b from-gray-900/90 to-gray-800/90 backdrop-blur-3xl',
+      text: 'text-white',
+      accent: 'bg-pink-500',
+      highlight: 'bg-purple-500/90',
+      opponent: 'bg-gray-700/90 backdrop-blur-3xl',
+      badge: 'bg-emerald-400',
+      hover: 'hover:bg-pink-600/80',
+      input: 'bg-white/15 shadow-lg border border-white/25',
+      bubbleSelf: 'bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500',
+      bubbleOther: 'bg-gradient-to-r from-gray-600 to-gray-700',
+      button: 'bg-gradient-to-r from-purple-600 to-pink-600',
+      modalHeader: 'bg-gradient-to-r from-purple-600 to-pink-600',
+    },
+  };
 
-  const bgColor = useColorModeValue(primaryBg, primaryBg);
-  const glassBg = useColorModeValue('rgba(237, 242, 247, 0.9)', 'rgba(28, 28, 28, 0.9)');
-  const hoverBg = useColorModeValue('rgba(0, 181, 216, 0.1)', 'rgba(0, 181, 216, 0.2)');
-  const glowShadow = `0 0 8px ${accentColor}`;
-  const buttonBg = useColorModeValue(accentColor, accentColor);
-  const buttonHoverBg = useColorModeValue('#00A3C4', '#00A3C4');
-  const textColor = useColorModeValue(primaryText, primaryText);
-  const secondaryTextColor = useColorModeValue(secondaryText, secondaryText);
-  const borderColor = useColorModeValue('#E2E8F0', '#2B2B2B');
+  const currentTheme = themes[theme];
 
-  const pulse = keyframes`
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
-  `;
-  const bounce = keyframes`
-    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-    40% { transform: translateY(-10px); }
-    60% { transform: translateY(-5px); }
-  `;
-  const wave = keyframes`
-    0% { height: 6px; }
-    50% { height: 12px; }
-    100% { height: 6px; }
-  `;
+  const scrollToBottom = useCallback(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+  }, []);
+
+  const fetchFriendRequests = useCallback(async () => {
+    if (!token) return;
+    try {
+      const requestsRes = await fetch(`${apiUrl}/friend-requests`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const requestsData = await requestsRes.json();
+      if (!requestsRes.ok) throw new Error(requestsData.detail || 'Failed to fetch friend requests');
+      setFriendRequests(requestsData);
+      setFriendRequestCount(requestsData.filter(req => req.status === 'pending' && req.recipient_username === currentUsername).length);
+
+      const suggestionsRes = await fetch(`${apiUrl}/users/suggestions`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const suggestionsData = await suggestionsRes.json();
+      if (suggestionsRes.ok) {
+        setSuggestedFriends(suggestionsData.slice(0, 5));
+      } else {
+        setSuggestedFriends([]);
+      }
+    } catch (e) {
+      console.error('Fetch friend requests error:', e);
+      toast({ title: 'Fetch Error', description: e.message, status: 'error', duration: 3000, isClosable: true });
+      setFriendRequests([]);
+      setFriendRequestCount(0);
+    }
+  }, [token, currentUsername, toast]);
+
+  const handleNewMessage = useCallback((message) => {
+    if (!message.id || !message.content || !message.sender_username || !message.recipient_username) return;
+
+    const convUsername = message.sender_username === currentUsername ? message.recipient_username : message.sender_username;
+
+    setConversations(prev => {
+      const existingConv = prev.find(c => c.username === convUsername);
+      if (existingConv && existingConv.messages.some(m => m.id === message.id)) return prev;
+
+      const newMessage = {
+        ...message,
+        timestamp: message.timestamp || new Date().toISOString(),
+        reactions: message.reactions || [],
+      };
+
+      if (existingConv) {
+        return prev.map(c => c.username === convUsername ? {
+          ...c,
+          messages: [...c.messages.filter(m => m.id !== message.id), newMessage],
+        } : c);
+      }
+      return [...prev, { username: convUsername, messages: [newMessage] }];
+    });
+
+    if (message.recipient_username === currentUsername && selectedUser === convUsername) {
+      scrollToBottom();
+    }
+
+    if (message.type === 'friend_request' && message.recipient_username === currentUsername) {
+      setFriendRequestCount(prev => prev + 1);
+      fetchFriendRequests();
+      toast({
+        title: `New Friend Request!`,
+        description: `${message.sender_username} wants to connect`,
+        status: 'info',
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  }, [currentUsername, fetchFriendRequests, toast, selectedUser, scrollToBottom]);
+
+  const handleMessageRead = useCallback((messageId) => {
+    setConversations(prev => prev.map(conv => ({
+      ...conv,
+      messages: conv.messages.map(msg => msg.id === messageId ? { ...msg, is_read: true } : msg),
+    })));
+  }, []);
+
+  const handleMessageEdit = useCallback((message) => {
+    setConversations(prev => prev.map(conv => ({
+      ...conv,
+      messages: conv.messages.map(msg => msg.id === message.id ? { ...msg, content: message.content } : msg),
+    })));
+  }, []);
+
+  const handleMessageDelete = useCallback((messageId) => {
+    setConversations(prev => prev.map(conv => ({
+      ...conv,
+      messages: conv.messages.filter(msg => msg.id !== messageId),
+    })));
+  }, []);
+
+  const handleUserStatus = useCallback((data) => {
+    setOnlineUsers(prev => ({ ...prev, [data.username]: data.online }));
+    if (!data.online) {
+      setLastSeen(prev => ({ ...prev, [data.username]: new Date().toISOString() }));
+    }
+  }, []);
+
+  const handleFriendAccepted = useCallback((data) => {
+    setConversations(prev => {
+      const exists = prev.find(c => c.username === data.username);
+      if (!exists) return [...prev, { username: data.username, messages: [] }];
+      return prev;
+    });
+    toast({ title: `${data.username} is now your friend!`, status: 'success', duration: 3000, isClosable: true });
+    fetchFriendRequests();
+  }, [toast, fetchFriendRequests]);
+
+  const handleTyping = useCallback((data) => {
+    if (data.recipient === currentUsername) {
+      setTypingUsers(prev => ({
+        ...prev,
+        [data.username]: data.isTyping,
+      }));
+      if (data.isTyping) {
+        setTimeout(() => {
+          setTypingUsers(prev => ({
+            ...prev,
+            [data.username]: false,
+          }));
+        }, 2000);
+      }
+    }
+  }, [currentUsername]);
+
+  const handleReaction = useCallback((data) => {
+    setConversations(prev => prev.map(conv => ({
+      ...conv,
+      messages: conv.messages.map(msg => msg.id === data.message_id ? {
+        ...msg,
+        reactions: data.reactions,
+      } : msg),
+    })));
+  }, []);
+
+  const handlePinned = useCallback((data) => {
+    setPinnedMessages(prev => data.isPinned ? [...prev, data.message_id] : prev.filter(id => id !== data.message_id));
+  }, []);
+
+  useEffect(() => {
+    const savedWidth = localStorage.getItem('sidebarWidth');
+    if (savedWidth) setSidebarWidth(parseInt(savedWidth, 10));
+
+    const handleResize = (e) => {
+      if (resizeRef.current) {
+        const newWidth = e.clientX;
+        if (newWidth >= 280 && newWidth <= 400) {
+          setSidebarWidth(newWidth);
+          localStorage.setItem('sidebarWidth', newWidth);
+          sidebarRef.current.style.transition = 'none';
+        }
+      }
+    };
+
+    const handlePointerUp = () => {
+      resizeRef.current = null;
+      document.removeEventListener('pointermove', handleResize);
+      document.removeEventListener('pointerup', handlePointerUp);
+      sidebarRef.current.style.transition = 'width 0.4s ease';
+    };
+
+    if (sidebarRef.current) {
+      const resizeHandle = sidebarRef.current.querySelector('.resize-handle');
+      if (resizeHandle) {
+        resizeHandle.addEventListener('pointerdown', (e) => {
+          resizeRef.current = e.target;
+          document.addEventListener('pointermove', handleResize);
+          document.addEventListener('pointerup', handlePointerUp);
+        });
+      }
+    }
+
+    return () => {
+      document.removeEventListener('pointermove', handleResize);
+      document.removeEventListener('pointerup', handlePointerUp);
+    };
+  }, []);
+
+  const connectWebSocket = useCallback(() => {
+    if (!token || socketRef.current?.readyState === WebSocket.OPEN) return;
+
+    let reconnectAttempts = 0;
+    const maxAttempts = 5;
+    const maxDelay = 30000;
+
+    const attemptReconnect = () => {
+      if (reconnectAttempts >= maxAttempts) {
+        toast({
+          title: 'Connection Failed',
+          description: 'Unable to connect to the server. Please try again later.',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+        return;
+      }
+
+      const ws = new WebSocket(`wss://chitchat-server-emw5.onrender.com/ws?token=${token}`);
+      socketRef.current = ws;
+
+      ws.onopen = () => {
+        setIsSocketConnected(true);
+        reconnectAttempts = 0;
+        toast({
+          title: 'Connected',
+          description: 'Real-time messaging enabled.',
+          status: 'success',
+          duration: 2000,
+          isClosable: true,
+        });
+      };
+
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        switch (data.type) {
+          case 'message':
+            handleNewMessage(data.data);
+            break;
+          case 'read':
+            handleMessageRead(data.data.id);
+            break;
+          case 'edit':
+            handleMessageEdit(data.data);
+            break;
+          case 'delete':
+            handleMessageDelete(data.data.id);
+            break;
+          case 'status':
+            handleUserStatus(data.data);
+            break;
+          case 'friend_accepted':
+            handleFriendAccepted(data.data);
+            break;
+          case 'typing':
+            handleTyping(data.data);
+            break;
+          case 'reaction':
+            handleReaction(data.data);
+            break;
+          case 'pinned':
+            handlePinned(data.data);
+            break;
+          case 'ping':
+            ws.send(JSON.stringify({ type: 'pong' }));
+            break;
+          default:
+            console.warn('Unknown WebSocket message type:', data.type);
+        }
+      };
+
+      ws.onclose = (event) => {
+        setIsSocketConnected(false);
+        const delay = Math.min(1000 * 2 ** reconnectAttempts, maxDelay);
+        reconnectAttempts++;
+        toast({
+          title: 'Disconnected',
+          description: `Reconnecting in ${delay / 1000} seconds...`,
+          status: 'warning',
+          duration: 3000,
+          isClosable: true,
+        });
+        setTimeout(attemptReconnect, delay);
+      };
+
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        setIsSocketConnected(false);
+        ws.close();
+      };
+    };
+
+    attemptReconnect();
+  }, [token, toast, handleNewMessage, handleMessageRead, handleMessageEdit, handleMessageDelete, handleUserStatus, handleFriendAccepted, handleTyping, handleReaction, handlePinned]);
 
   const fetchCurrentUser = useCallback(async () => {
     if (!token || currentUsername) return;
@@ -116,105 +383,9 @@ function App() {
       toast({ title: 'Session Expired', description: 'Please log in again.', status: 'error', duration: 3000, isClosable: true });
     } finally {
       setIsLoading(false);
+      setIsInitialLoad(false);
     }
-  }, [token, currentUsername, toast, apiUrl]);
-
-  const fetchFriendRequests = useCallback(async () => {
-    if (!token) return;
-    try {
-      const requestsRes = await fetch(`${apiUrl}/friend-requests`, { headers: { 'Authorization': `Bearer ${token}` } });
-      const requestsData = await requestsRes.json();
-      if (!requestsRes.ok) throw new Error(requestsData.detail || 'Failed to fetch friend requests');
-      setFriendRequests(requestsData);
-      setFriendRequestCount(requestsData.filter(req => req.status === 'pending').length);
-
-      const suggestionsRes = await fetch(`${apiUrl}/users/suggestions`, { headers: { 'Authorization': `Bearer ${token}` } });
-      const suggestionsData = await suggestionsRes.json();
-      if (suggestionsRes.ok) {
-        setSuggestedFriends(suggestionsData.slice(0, 5));
-      } else {
-        setSuggestedFriends([]);
-      }
-    } catch (e) {
-      console.error('Fetch friend requests error:', e);
-      toast({ title: 'Fetch Error', description: e.message, status: 'error', duration: 3000, isClosable: true });
-      setFriendRequests([]);
-      setFriendRequestCount(0);
-    }
-  }, [token, toast, apiUrl]);
-
-  const handleNewMessage = useCallback((message) => {
-    if (!message.type || !message.content) return;
-    setConversations(prev => {
-      const convUsername = message.sender_username === currentUsername ? message.recipient_username : message.sender_username;
-      const existingConv = prev.find(c => c.username === convUsername);
-      if (existingConv) {
-        if (!existingConv.messages.some(m => m.id === message.id)) {
-          return prev.map(c => c.username === convUsername ? { ...c, messages: [...c.messages, message] } : c);
-        }
-        return prev;
-      }
-      return [...prev, { username: convUsername, messages: [message] }];
-    });
-    if (message.type === "friend_request" && message.recipient_username === currentUsername) {
-      setFriendRequestCount(prev => prev + 1);
-      fetchFriendRequests();
-      toast({
-        title: `New Friend Request!`,
-        description: `${message.sender_username} wants to connect`,
-        status: 'info',
-        duration: 5000,
-        isClosable: true,
-      });
-    }
-  }, [currentUsername, toast, fetchFriendRequests]);
-
-  const handleMessageRead = useCallback((messageId) => {
-    setConversations(prev => prev.map(conv => ({
-      ...conv,
-      messages: conv.messages.map(msg => msg.id === messageId ? { ...msg, is_read: true } : msg)
-    })));
-  }, []);
-
-  const handleMessageEdit = useCallback((message) => {
-    setConversations(prev => prev.map(conv => ({
-      ...conv,
-      messages: conv.messages.map(msg => msg.id === message.id ? { ...msg, content: message.content } : msg)
-    })));
-  }, []);
-
-  const handleMessageDelete = useCallback((messageId) => {
-    setConversations(prev => prev.map(conv => ({
-      ...conv,
-      messages: conv.messages.filter(msg => msg.id !== messageId)
-    })));
-  }, []);
-
-  const handleUserStatus = useCallback((data) => {
-    setOnlineUsers(prev => ({ ...prev, [data.username]: data.online }));
-  }, []);
-
-  const handleFriendAccepted = useCallback((data) => {
-    setConversations(prev => {
-      const exists = prev.find(c => c.username === data.username);
-      if (!exists) return [...prev, { username: data.username, messages: [] }];
-      return prev;
-    });
-    toast({ title: `${data.username} is now your friend!`, status: 'success', duration: 3000, isClosable: true });
-  }, [toast]);
-
-  const markMessageAsRead = useCallback(async (messageId) => {
-    try {
-      const res = await fetch(`${apiUrl}/messages/mark_read/${messageId}`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error((await res.json()).detail || 'Failed to mark message as read');
-      handleMessageRead(messageId);
-    } catch (e) {
-      console.error('Mark message as read error:', e);
-    }
-  }, [token, handleMessageRead, apiUrl]);
+  }, [token, currentUsername, toast]);
 
   const fetchConversations = useCallback(async () => {
     if (!token) return;
@@ -232,6 +403,7 @@ function App() {
           ...msg,
           timestamp: msg.timestamp,
           type: msg.type || 'text',
+          reactions: msg.reactions || [],
         })),
       })));
     } catch (e) {
@@ -244,63 +416,36 @@ function App() {
       }
     } finally {
       setIsLoading(false);
+      setIsInitialLoad(false);
     }
-  }, [token, toast, apiUrl]);
+  }, [token, toast]);
+
+  const markMessageAsRead = useCallback(async (messageId) => {
+    try {
+      const res = await fetch(`${apiUrl}/messages/mark_read/${messageId}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error((await res.json()).detail || 'Failed to mark message as read');
+      handleMessageRead(messageId);
+    } catch (e) {
+      console.error('Mark message as read error:', e);
+    }
+  }, [token, handleMessageRead]);
 
   useEffect(() => {
     if (!token) return;
     fetchCurrentUser();
     fetchFriendRequests();
-    const ws = new WebSocket(`${wsUrl}?token=${token}`);
-    socketRef.current = ws;
-
-    ws.onopen = () => {
-      console.log('WebSocket connected successfully');
-      setIsSocketConnected(true);
-    };
-    ws.onmessage = (event) => {
-      console.log('WebSocket message received:', event.data);
-      const data = JSON.parse(event.data);
-      switch (data.type) {
-        case 'message':
-          handleNewMessage(data.data);
-          break;
-        case 'read':
-          handleMessageRead(data.data.id);
-          break;
-        case 'edit':
-          handleMessageEdit(data.data);
-          break;
-        case 'delete':
-          handleMessageDelete(data.data.id);
-          break;
-        case 'status':
-          handleUserStatus(data.data);
-          break;
-        case 'friend_accepted':
-          handleFriendAccepted(data.data);
-          fetchFriendRequests();
-          break;
-        case 'typing':
-          if (data.data.username === selectedUser) setIsTyping(data.data.isTyping);
-          break;
-        default:
-          console.warn('Unknown WebSocket message type:', data.type);
-      }
-    };
-    ws.onclose = (event) => {
-      console.log('WebSocket closed with code:', event.code, 'reason:', event.reason);
-      setIsSocketConnected(false);
-    };
-    ws.onerror = (error) => console.error('WebSocket error:', error);
     fetchConversations();
+    connectWebSocket();
 
     return () => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.close(1000, 'Component unmounted');
+      if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+        socketRef.current.close(1000, 'Component unmounted');
       }
     };
-  }, [token, fetchCurrentUser, fetchFriendRequests, handleNewMessage, handleMessageRead, handleMessageEdit, handleMessageDelete, handleUserStatus, handleFriendAccepted, fetchConversations, selectedUser, wsUrl]);
+  }, [token, fetchCurrentUser, fetchFriendRequests, fetchConversations, connectWebSocket]);
 
   useEffect(() => {
     if (!selectedUser || !socketRef.current) return;
@@ -322,10 +467,11 @@ function App() {
   }, [selectedUser, conversations, currentUsername, markMessageAsRead]);
 
   useEffect(() => {
-    if (chatContainerRef.current && selectedUser) {
-      chatContainerRef.current.scrollTo({ top: chatContainerRef.current.scrollHeight, behavior: 'smooth' });
+    if (selectedUser && conversations.length) {
+      scrollToBottom();
+      setIsSidebarOpen(false);
     }
-  }, [conversations, selectedUser]);
+  }, [selectedUser, conversations, scrollToBottom]);
 
   useEffect(() => {
     if (isRecording) {
@@ -337,12 +483,44 @@ function App() {
     return () => clearInterval(recordingTimerRef.current);
   }, [isRecording]);
 
-  const debouncedTyping = useMemo(() => debounce(() => {
-    if (socketRef.current && selectedUser) {
-      socketRef.current.send(JSON.stringify({ type: 'typing', data: { username: currentUsername, isTyping: true } }));
-      setTimeout(() => socketRef.current.send(JSON.stringify({ type: 'typing', data: { username: currentUsername, isTyping: false } })), 2000);
+  useEffect(() => {
+    if (isSocketConnected && queuedMessages.length > 0) {
+      const syncMessages = async () => {
+        for (const { message } of queuedMessages) {
+          try {
+            const response = await fetch(`${apiUrl}/messages`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+              body: JSON.stringify(message),
+            });
+            if (!response.ok) throw new Error((await response.json()).detail);
+          } catch (e) {
+            console.error('Sync message error:', e);
+          }
+        }
+        setQueuedMessages([]);
+      };
+      syncMessages();
     }
-  }, 300), [currentUsername, selectedUser]);
+  }, [isSocketConnected, queuedMessages, token]);
+
+  const debouncedTyping = useMemo(() => debounce(() => {
+    if (socketRef.current && selectedUser && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({
+        type: 'typing',
+        data: { recipient: selectedUser, isTyping: true },
+      }));
+    }
+  }, 200), [selectedUser]);
+
+  const stopTyping = useCallback(() => {
+    if (socketRef.current && selectedUser && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({
+        type: 'typing',
+        data: { recipient: selectedUser, isTyping: false },
+      }));
+    }
+  }, [selectedUser]);
 
   const handleAuth = async () => {
     const endpoint = isRegistering ? '/register' : '/login';
@@ -403,6 +581,7 @@ function App() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Failed to send friend request');
       toast({ title: 'Friend Request Sent', description: `To ${recipientUsername}`, status: 'success', duration: 2000, isClosable: true });
+      fetchFriendRequests();
     } catch (e) {
       console.error('Send friend request error:', e);
       toast({ title: 'Request Failed', description: e.message, status: 'error', duration: 3000, isClosable: true });
@@ -439,27 +618,81 @@ function App() {
   };
 
   const sendMessage = async (content = messageContent, type = 'text') => {
-    if (!selectedUser || (!content.trim() && type === 'text')) return toast({ title: 'Oops!', description: 'Select a user and type a message.', status: 'warning', duration: 2000, isClosable: true });
-    setIsLoading(true);
+    if (!selectedUser) return;
+    if (type === 'text' && !content.trim()) return;
+
+    const tempId = `temp-${Date.now()}`;
+    const newMessage = {
+      id: tempId,
+      sender_username: currentUsername,
+      recipient_username: selectedUser,
+      content,
+      type,
+      timestamp: new Date().toISOString(),
+      is_read: false,
+      reactions: [],
+    };
+
+    setConversations(prev => {
+      const existingConv = prev.find(c => c.username === selectedUser);
+      if (existingConv) {
+        return prev.map(c => c.username === selectedUser ? {
+          ...c,
+          messages: [...c.messages, newMessage],
+        } : c);
+      }
+      return [...prev, { username: selectedUser, messages: [newMessage] }];
+    });
+
+    scrollToBottom();
+
+    if (!isSocketConnected) {
+      setQueuedMessages(prev => [...prev, { message: { recipient_username: selectedUser, content, type } }]);
+      toast({
+        title: 'Offline',
+        description: 'Message queued. It will be sent when reconnected.',
+        status: 'warning',
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
     try {
-      const res = await fetch(`${apiUrl}/messages`, {
+      const response = await fetch(`${apiUrl}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ recipient_username: selectedUser, content, type }),
       });
-      if (!res.ok) throw new Error((await res.json()).detail || 'Failed to send message');
+
+      if (!response.ok) throw new Error((await response.json()).detail || 'Failed to send message');
+
+      setConversations(prev => prev.map(c => c.username === selectedUser ? {
+        ...c,
+        messages: c.messages.filter(m => m.id !== tempId),
+      } : c));
+
       if (type === 'text') setMessageContent('');
       if (type === 'audio') setAudioBlob(null);
+      stopTyping();
     } catch (e) {
       console.error('Send message error:', e);
-      toast({ title: 'Send Failed', description: e.message, status: 'error', duration: 3000, isClosable: true });
-    } finally {
-      setIsLoading(false);
+      setQueuedMessages(prev => [...prev, { message: { recipient_username: selectedUser, content, type } }]);
+      toast({
+        title: 'Send Failed',
+        description: 'Message queued due to network issue.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
     }
   };
 
   const editMessage = async (messageId) => {
-    if (!editingMessage || !editingMessage.content.trim()) return toast({ title: 'Empty Edit', description: 'Enter content to edit.', status: 'warning', duration: 2000, isClosable: true });
+    if (!editingMessage || !editingMessage.content.trim()) {
+      toast({ title: 'Empty Edit', description: 'Enter content to edit.', status: 'warning', duration: 2000, isClosable: true });
+      return;
+    }
     setIsLoading(true);
     try {
       const res = await fetch(`${apiUrl}/messages/${messageId}`, {
@@ -468,6 +701,15 @@ function App() {
         body: JSON.stringify({ content: editingMessage.content }),
       });
       if (!res.ok) throw new Error((await res.json()).detail || 'Failed to edit message');
+      
+      if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+        socketRef.current.send(JSON.stringify({
+          type: 'edit',
+          data: { id: messageId, content: editingMessage.content },
+        }));
+      }
+
+      handleMessageEdit({ id: messageId, content: editingMessage.content });
       setEditingMessage(null);
       toast({ title: 'Message Updated', status: 'success', duration: 2000, isClosable: true });
     } catch (e) {
@@ -583,48 +825,79 @@ function App() {
 
   const selectConversation = useCallback((username) => {
     setSelectedUser(username);
-    fetchConversations();
-  }, [fetchConversations]);
+    setIsSidebarOpen(false);
+    scrollToBottom();
+  }, [scrollToBottom]);
 
-  const handleEmojiClick = (emojiObject) => setMessageContent(prev => prev + emojiObject.emoji);
+  const handleEmojiClick = (emojiObject) => {
+    setMessageContent(prev => prev + emojiObject.emoji);
+    debouncedTyping();
+  };
 
   const handleImageClick = (imageSrc) => {
     setExpandedImage(imageSrc);
     onImageOpen();
   };
 
+  const pinMessage = async (messageId) => {
+    try {
+      const res = await fetch(`${apiUrl}/messages/pin/${messageId}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error((await res.json()).detail || 'Failed to pin message');
+      setPinnedMessages(prev => prev.includes(messageId) ? prev.filter(id => id !== messageId) : [...prev, messageId]);
+    } catch (e) {
+      console.error('Pin message error:', e);
+      toast({ title: 'Pin Failed', description: e.message, status: 'error', duration: 3000 });
+    }
+  };
+
+  const reactToMessage = async (messageId, emoji) => {
+    try {
+      const res = await fetch(`${apiUrl}/messages/react/${messageId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ emoji }),
+      });
+      if (!res.ok) throw new Error((await res.json()).detail || 'Failed to react to message');
+    } catch (e) {
+      console.error('React to message error:', e);
+      toast({ title: 'Reaction Failed', description: e.message, status: 'error', duration: 3000 });
+    }
+  };
+
   const formatTime = (seconds) => `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, '0')}`;
-  const formatTimestamp = (timestamp) => new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
+  const formatTimestamp = (timestamp) => new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const formatLastSeen = (timestamp) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMinutes = Math.floor((now - date) / 60000);
+    if (diffMinutes < 1) return 'Just now';
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
 
   if (!token) {
     return (
-      <Flex minH="100vh" bg={bgColor} align="center" justify="center" p={{ base: 4, md: 8 }}>
+      <div className={`min-h-screen flex items-center justify-center ${currentTheme.primary} p-4 font-sans`}>
         <MotionBox
-          w={{ base: '100%', sm: '90%', md: '400px' }}
-          maxW="500px"
-          p={{ base: 6, md: 8 }}
-          bg={glassBg}
-          borderRadius="2xl"
-          boxShadow="xl"
-          initial={{ opacity: 0, y: 50 }}
+          className="w-full max-w-md p-8 bg-white/15 backdrop-blur-3xl rounded-2xl shadow-2xl border border-white/30"
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
+          transition={{ duration: 0.6, ease: 'easeOut' }}
         >
-          <Text fontSize={{ base: '2xl', md: '3xl' }} fontWeight="bold" mb={6} textAlign="center" color={accentColor}>
-            {isRegistering ? 'Join ChitChat' : 'Enter ChitChat'}
-          </Text>
-          <VStack spacing={4}>
+          <h1 className="text-3xl font-bold text-center text-white mb-8 drop-shadow-lg">
+            {isRegistering ? 'Join ChitChat' : 'Welcome to ChitChat'}
+          </h1>
+          <VStack spacing={6}>
             <Input
+              type="text"
               placeholder="Username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              bg={glassBg}
-              border="1px solid"
-              borderColor={accentColor}
-              p={6}
-              color={textColor}
-              _focus={{ borderColor: accentColor, boxShadow: glowShadow }}
-              borderRadius="full"
+              className={`w-full p-4 rounded-lg ${currentTheme.input} ${currentTheme.text} placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all text-base`}
+              aria-label="Username"
             />
             <InputGroup>
               <Input
@@ -632,771 +905,974 @@ function App() {
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                bg={glassBg}
-                border="1px solid"
-                borderColor={accentColor}
-                p={6}
-                color={textColor}
-                _focus={{ borderColor: accentColor, boxShadow: glowShadow }}
-                borderRadius="full"
+                className={`w-full p-4 rounded-lg ${currentTheme.input} ${currentTheme.text} placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all text-base`}
+                aria-label="Password"
               />
-              <InputRightElement h="full" pr={4}>
-                <IconButton
-                  icon={showPassword ? <FaEyeSlash /> : <FaEye />}
-                  variant="ghost"
-                  color={accentColor}
-                  _hover={{ color: buttonHoverBg }}
+              <InputRightElement>
+                <Button
                   onClick={() => setShowPassword(!showPassword)}
+                  variant="ghost"
+                  className="text-purple-300 hover:text-purple-400"
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
-                />
+                >
+                  {showPassword ? 'Hide' : 'Show'}
+                </Button>
               </InputRightElement>
             </InputGroup>
             <MotionButton
               onClick={handleAuth}
-              bg={buttonBg}
-              color={primaryText}
-              w="full"
-              p={6}
-              _hover={{ bg: buttonHoverBg, transform: 'scale(1.05)' }}
-              borderRadius="full"
-              isLoading={isLoading}
+              className={`w-full p-4 ${currentTheme.button} ${currentTheme.text} rounded-lg ${currentTheme.hover} transition-all text-base font-semibold`}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              disabled={isLoading}
+              aria-label={isRegistering ? 'Register' : 'Login'}
             >
-              {isRegistering ? 'Register' : 'Login'}
+              {isLoading ? <Spinner size="sm" /> : (isRegistering ? 'Register' : 'Login')}
             </MotionButton>
             <Button
               onClick={() => setIsRegistering(!isRegistering)}
               variant="link"
-              color={accentColor}
-              _hover={{ color: buttonHoverBg }}
+              className="text-purple-200 hover:text-purple-300 transition-colors text-sm"
+              aria-label={isRegistering ? 'Switch to login' : 'Switch to register'}
             >
               {isRegistering ? 'Already have an account? Login' : 'New to ChitChat? Register'}
             </Button>
           </VStack>
         </MotionBox>
-      </Flex>
+      </div>
     );
   }
 
   return (
-    <Flex h="100vh" bg={bgColor} direction={{ base: 'column', md: 'row' }} overflow="hidden">
+    <div className="h-screen w-screen flex overflow-hidden font-sans">
+      <style>
+        {`
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+          html, body, #root {
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+          }
+          * {
+            box-sizing: border-box;
+          }
+          .typing-dots span {
+            animation: typing 1s infinite;
+            animation-delay: calc(0.15s * var(--i));
+          }
+          @keyframes typing {
+            0% { transform: translateY(0); opacity: 0.5; }
+            50% { transform: translateY(-3px); opacity: 1; }
+            100% { transform: translateY(0); opacity: 0.5; }
+          }
+          .message-bubble:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+          }
+          .message-bubble:hover .actions {
+            opacity: 1;
+          }
+          .sidebar-transition {
+            transition: transform 0.4s ease, width 0.4s ease;
+          }
+          .glow-effect:hover {
+            box-shadow: 0 0 20px rgba(236, 72, 153, 0.4);
+          }
+          .typing-indicator {
+            font-size: 0.85rem;
+            color: #d8b4fe;
+            animation: pulse 1.5s infinite;
+          }
+          @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+          }
+          .chat-container {
+            scroll-behavior: smooth;
+            overflow-x: hidden;
+            overflow-y: auto;
+            height: calc(100vh - 180px); /* Adjusted for better mobile fit */
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+          }
+          .chat-container::-webkit-scrollbar {
+            width: 6px;
+          }
+          .chat-container::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+          }
+          .sidebar-container {
+            overflow-y: auto;
+            overflow-x: hidden;
+            height: 100vh;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+          }
+          .sidebar-container::-webkit-scrollbar {
+            width: 6px;
+          }
+          .sidebar-container::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+          }
+          .resize-handle {
+            width: 6px;
+            background: linear-gradient(to bottom, #ec4899, #8b5cf6);
+            cursor: col-resize;
+            position: absolute;
+            right: -3px;
+            top: 0;
+            bottom: 0;
+            z-index: 20;
+            border-radius: 3px;
+            transition: background 0.2s ease, box-shadow 0.2s ease;
+          }
+          .resize-handle:hover {
+            background: linear-gradient(to bottom, #f472b6, #a78bfa);
+            box-shadow: 0 0 12px rgba(236, 72, 153, 0.6);
+          }
+          .message-bubble {
+            position: relative;
+            padding: 10px 16px;
+            border-radius: 20px;
+            margin: 8px 12px;
+            max-width: 75%;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(12px);
+          }
+          .message-bubble.self {
+            margin-left: auto;
+            border-bottom-right-radius: 6px;
+          }
+          .message-bubble.other {
+            margin-right: auto;
+            border-bottom-left-radius: 6px;
+          }
+          .message-bubble::before {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 0;
+            top: 12px;
+            border: 8px solid transparent;
+          }
+          .message-bubble.self::before {
+            right: -8px;
+            border-left-color: inherit;
+          }
+          .message-bubble.other::before {
+            left: -8px;
+            border-right-color: inherit;
+          }
+          .friend-request-item {
+            transition: all 0.3s ease;
+            border-radius: 12px;
+          }
+          .friend-request-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+          }
+          .date-header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(10px);
+            padding: 8px 16px;
+            border-radius: 12px;
+            margin: 8px auto;
+            width: fit-content;
+            font-size: 0.9rem;
+            color: #d1d5db;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+          }
+          .profile-card {
+            transition: all 0.3s ease;
+            border-radius: 12px;
+          }
+          .profile-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+          }
+          .input-container {
+            border-radius: 30px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            position: sticky;
+            bottom: 0;
+            z-index: 10;
+          }
+          .new-message {
+            animation: slideIn 0.4s ease;
+          }
+          @keyframes slideIn {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+          }
+          .sidebar-item {
+            transition: all 0.3s ease;
+            border-radius: 12px;
+            padding: 12px;
+          }
+          .sidebar-item:hover {
+            background: rgba(255, 255, 255, 0.12);
+            transform: translateY(-2px);
+          }
+          .recording-progress {
+            height: 5px;
+            background: #ec4899;
+            animation: pulse 2s infinite;
+            border-radius: 2px;
+          }
+          .modal-content {
+            border-radius: 16px;
+            overflow: hidden;
+          }
+          .modal-header {
+            color: white;
+            padding: 16px 24px;
+          }
+          .modal-body {
+            padding: 24px;
+          }
+          .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+          }
+          @media (max-width: 640px) {
+            .sidebar-container {
+              position: fixed;
+              top: 0;
+              left: 0;
+              height: 100vh;
+              width: 280px;
+              z-index: 1000;
+              transform: translateX(-280px);
+              box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            }
+            .sidebar-container.open {
+              transform: translateX(0);
+            }
+            .sidebar-content {
+              padding-top: 16px;
+            }
+            .sidebar-mobile-nav {
+              display: none;
+            }
+            .chat-container {
+              height: calc(100vh - 140px); /* Reduced height for input visibility */
+              margin-bottom: 60px; /* Ensure space for input container */
+            }
+            .input-container {
+              padding: 8px; /* Reduced padding for better fit */
+              position: fixed;
+              bottom: 0;
+              left: 0;
+              right: 0;
+              z-index: 20;
+              background: rgba(255, 255, 255, 0.12);
+              backdrop-filter: blur(15px);
+              border-top: 1px solid rgba(255, 255, 255, 0.25);
+            }
+            .message-bubble {
+              max-width: 80%;
+              padding: 8px 12px;
+            }
+            .resize-handle {
+              display: none;
+            }
+            .profile-card {
+              padding: 12px;
+            }
+            .date-header {
+              font-size: 0.8rem;
+              padding: 6px 12px;
+            }
+          }
+          @media (min-width: 641px) {
+            .sidebar-container {
+              transform: translateX(0) !important;
+            }
+            .sidebar-mobile-nav {
+              display: none;
+            }
+          }
+        `}
+      </style>
       <MotionBox
-        w={{ base: '100%', md: 'min(25vw, 400px)' }}
-        maxW="400px"
-        bg={secondaryBg}
-        p={{ base: 4, md: 6 }}
-        h={{ base: 'auto', md: '100vh' }}
-        position={{ md: 'fixed' }}
-        overflowY="auto"
-        initial={{ x: { base: 0, md: -400 } }}
-        animate={{ x: 0 }}
-        transition={{ duration: 0.5 }}
-        borderRight={{ md: `1px solid ${borderColor}` }}
+        ref={sidebarRef}
+        className={`sidebar-transition sidebar-container ${currentTheme.secondary} p-4 relative shadow-2xl ${isSidebarOpen ? 'open' : ''}`}
+        style={{ width: isSidebarOpen ? `${sidebarWidth}px` : '0px', minWidth: isSidebarOpen ? '280px' : '0px' }}
+        initial={{ x: -sidebarWidth }}
+        animate={{ x: isSidebarOpen ? 0 : -sidebarWidth }}
+        transition={{ duration: 0.4, ease: 'easeOut' }}
       >
-        <VStack spacing={{ base: 4, md: 6 }} align="stretch" h="full">
-          <HStack justify="space-between">
-            <Text fontSize={{ base: 'xl', md: '2xl' }} fontWeight="bold" color={accentColor}>
-              ChitChat
-            </Text>
-            <HStack spacing={3}>
-              <Tooltip label="Friend Requests">
+        <Box className="resize-handle" />
+        {isSidebarOpen && (
+          <VStack spacing={6} align="stretch">
+            <Flex justify="space-between" align="center">
+              <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500 drop-shadow-lg">
+                ChitChat
+              </h1>
+              <Tooltip label="Close Sidebar" placement="right">
                 <IconButton
-                  icon={<FaBell />}
-                  variant="ghost"
-                  color={accentColor}
-                  onClick={onFriendRequestsOpen}
-                  position="relative"
-                  css={friendRequestCount > 0 ? { animation: `${bounce} 1s infinite` } : {}}
-                >
-                  {friendRequestCount > 0 && (
-                    <Badge
-                      position="absolute"
-                      top="-1"
-                      right="-1"
-                      bg={notificationBadge}
-                      color="white"
-                      borderRadius="full"
-                      px={2}
-                    >
-                      {friendRequestCount}
-                    </Badge>
-                  )}
-                </IconButton>
+                  icon={<FaChevronLeft />}
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="text-purple-300 hover:text-purple-400 transition-colors"
+                  aria-label="Close sidebar"
+                  size="sm"
+                />
               </Tooltip>
-              <IconButton
-                icon={colorMode === 'light' ? <FaMoon /> : <FaSun />}
-                onClick={toggleColorMode}
-                variant="ghost"
-                color={accentColor}
-                _hover={{ color: buttonHoverBg }}
-              />
-            </HStack>
-          </HStack>
-          <VStack
-            flex={1}
-            overflowY="auto"
-            spacing={3}
-            sx={{ '&::-webkit-scrollbar': { width: '6px' }, '&::-webkit-scrollbar-thumb': { bg: accentColor, borderRadius: 'full' } }}
-          >
-            <AnimatePresence>
-              {conversations.map(conv => {
-                const unreadCount = conv.messages.filter(msg => msg.sender_username === conv.username && !msg.is_read && msg.type !== 'friend_request').length;
-                const isOnline = onlineUsers[conv.username] || false;
-                return (
-                  <MotionBox
-                    key={conv.username}
-                    p={3}
-                    bg={selectedUser === conv.username ? hoverBg : 'transparent'}
-                    _hover={{ bg: hoverBg }}
-                    borderRadius="lg"
-                    cursor="pointer"
-                    onClick={() => selectConversation(conv.username)}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <HStack justify="space-between" align="center">
-                      <HStack spacing={3}>
-                        <Avatar size="md" name={conv.username} bg={isOnline ? successColor : secondaryText} />
-                        <VStack align="start" spacing={0}>
-                          <Text color={textColor} fontWeight="bold">{conv.username}</Text>
-                          <Text color={secondaryTextColor} fontSize="sm" isTruncated maxW={{ base: '120px', md: '180px' }}>
-                            {conv.messages[conv.messages.length - 1]?.type === 'image' ? '[Image]' :
-                              conv.messages[conv.messages.length - 1]?.type === 'audio' ? '[Voice]' :
-                              conv.messages[conv.messages.length - 1]?.type === 'friend_request' ? '[Friend Request]' :
-                              conv.messages[conv.messages.length - 1]?.content.slice(0, 20) + '...'}
-                          </Text>
-                        </VStack>
-                      </HStack>
-                      <HStack spacing={2}>
-                        {unreadCount > 0 && (
-                          <Badge color="white" bg={notificationBadge} borderRadius="full" px={2}>
-                            {unreadCount}
-                          </Badge>
-                        )}
-                        <Menu>
-                          <MenuButton as={IconButton} icon={<FaEllipsisH />} size="sm" variant="ghost" color={secondaryTextColor} _hover={{ color: accentColor }} />
-                          <Portal>
-                            <MenuList bg={glassBg} border="none" boxShadow={glowShadow}>
-                              <MenuItem onClick={() => { setShowDeleteConversationModal(conv.username); onConvDeleteOpen(); }} color={errorColor}>Delete Conversation</MenuItem>
-                            </MenuList>
-                          </Portal>
-                        </Menu>
-                      </HStack>
-                    </HStack>
-                  </MotionBox>
-                );
-              })}
-            </AnimatePresence>
-          </VStack>
-          <VStack spacing={4}>
+            </Flex>
+            <MotionBox
+              className="p-4 bg-white/10 rounded-xl glow-effect profile-card border border-white/25"
+              whileHover={{ scale: 1.02 }}
+            >
+              <HStack spacing={4}>
+                <Avatar name={currentUsername} className="bg-gradient-to-r from-pink-500 to-purple-500 w-12 h-12 ring-2 ring-white/30" />
+                <VStack align="start" spacing={1}>
+                  <Text className={`font-semibold ${currentTheme.text} text-lg`}>{currentUsername}</Text>
+                  <Badge className={`${isSocketConnected ? currentTheme.badge : 'bg-red-400'} ${currentTheme.text} px-3 py-1 rounded-full text-xs font-medium`}>
+                    {isSocketConnected ? 'Online' : 'Offline'}
+                  </Badge>
+                </VStack>
+              </HStack>
+            </MotionBox>
             <Input
               placeholder="Search friends..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              bg={glassBg}
-              border="1px solid"
-              borderColor={accentColor}
-              p={6}
-              color={textColor}
-              _focus={{ borderColor: accentColor, boxShadow: glowShadow }}
-              borderRadius="full"
+              className={`w-full p-4 rounded-lg ${currentTheme.input} ${currentTheme.text} placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all text-base`}
+              aria-label="Search friends"
             />
             <MotionButton
               onClick={searchUsers}
-              bg={buttonBg}
-              color={primaryText}
-              w="full"
-              _hover={{ bg: buttonHoverBg, transform: 'scale(1.05)' }}
-              borderRadius="full"
-              isLoading={isLoading}
+              className={`w-full p-4 ${currentTheme.button} ${currentTheme.text} rounded-lg ${currentTheme.hover} transition-all text-base font-semibold`}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              disabled={isLoading}
+              aria-label="Search users"
             >
-              Search
+              {isLoading ? <Spinner size="sm" /> : 'Search'}
             </MotionButton>
-            <VStack maxH="200px" overflowY="auto" spacing={2} w="full" sx={{ '&::-webkit-scrollbar': { width: '6px' }, '&::-webkit-scrollbar-thumb': { bg: accentColor, borderRadius: 'full' } }}>
-              <AnimatePresence>
-                {users.map(user => (
-                  <MotionBox
-                    key={user.id}
-                    p={3}
-                    _hover={{ bg: hoverBg }}
-                    borderRadius="lg"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <HStack justify="space-between">
-                      <Text color={textColor} fontWeight="semibold" onClick={() => selectConversation(user.username)} cursor="pointer">{user.username}</Text>
-                      {!conversations.some(c => c.username === user.username) && (
-                        <IconButton
-                          icon={<FaUserPlus />}
-                          size="sm"
-                          variant="ghost"
-                          color={accentColor}
-                          _hover={{ color: buttonHoverBg }}
-                          onClick={() => sendFriendRequest(user.username)}
-                          aria-label="Send friend request"
-                        />
-                      )}
-                    </HStack>
-                  </MotionBox>
+            {isLoading && !isInitialLoad ? (
+              <Text className="text-gray-300 text-sm text-center">Loading...</Text>
+            ) : isInitialLoad ? (
+              <VStack spacing={3} w="full">
+                {[...Array(3)].map((_, i) => (
+                  <Skeleton key={i} height="60px" w="full" borderRadius="xl" />
                 ))}
-              </AnimatePresence>
-            </VStack>
-            <MotionButton
-              onClick={() => { localStorage.removeItem('token'); localStorage.removeItem('username'); setToken(null); setCurrentUsername(''); }}
-              bg={errorColor}
-              color={primaryText}
-              w="full"
-              _hover={{ bg: '#E02A20', transform: 'scale(1.05)' }}
-              borderRadius="full"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              Logout
-            </MotionButton>
-            <Text fontSize="xs" color={isSocketConnected ? successColor : errorColor}>
-              {isSocketConnected ? 'Connected' : 'Disconnected'}
-            </Text>
-          </VStack>
-        </VStack>
-      </MotionBox>
-
-      <Flex
-        flex={1}
-        direction="column"
-        ml={{ base: 0, md: 'min(25vw, 400px)' }}
-        h="100vh"
-      >
-        {selectedUser ? (
-          <>
-            <HStack
-              p={{ base: 3, md: 4 }}
-              bg={secondaryBg}
-              borderBottom={`1px solid ${borderColor}`}
-              position="sticky"
-              top={0}
-              zIndex={10}
-            >
-              <Avatar size={{ base: 'md', md: 'lg' }} name={selectedUser} bg={onlineUsers[selectedUser] ? successColor : secondaryText} />
-              <VStack align="start" spacing={0} flex={1}>
-                <Text fontSize={{ base: 'lg', md: 'xl' }} fontWeight="bold" color={textColor}>{selectedUser}</Text>
-                <Badge color="white" bg={onlineUsers[selectedUser] ? successColor : secondaryText} fontSize="sm" px={2} borderRadius="full">
-                  {onlineUsers[selectedUser] ? 'Online' : 'Offline'}
-                </Badge>
               </VStack>
+            ) : (
+              <VStack className="max-h-48 overflow-y-auto space-y-3 w-full">
+                <AnimatePresence>
+                  {users.map(user => (
+                    <MotionBox
+                      key={user.id}
+                      className="p-4 bg-white/10 rounded-xl hover:bg-white/15 glow-effect w-full sidebar-item border border-white/25"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      whileHover={{ scale: 1.02 }}
+                    >
+                      <Flex justify="space-between" align="center">
+                        <Text
+                          className={`font-medium ${currentTheme.text} cursor-pointer hover:text-purple-300 transition-colors text-base`}
+                          onClick={() => selectConversation(user.username)}
+                          aria-label={`Chat with ${user.username}`}
+                        >
+                          {user.username}
+                        </Text>
+                        {!conversations.some(c => c.username === user.username) && (
+                          <Tooltip label={`Send friend request to ${user.username}`} placement="right">
+                            <IconButton
+                              icon={<FaUserPlus />}
+                              onClick={() => sendFriendRequest(user.username)}
+                              className="text-purple-300 hover:text-purple-400 transition-colors"
+                              aria-label={`Send friend request to ${user.username}`}
+                              size="sm"
+                            />
+                          </Tooltip>
+                        )}
+                      </Flex>
+                    </MotionBox>
+                  ))}
+                </AnimatePresence>
+              </VStack>
+            )}
+            <VStack spacing={3} w="full">
+              {isInitialLoad ? (
+                <VStack spacing={3} w="full">
+                  {[...Array(3)].map((_, i) => (
+                    <Skeleton key={i} height="60px" w="full" borderRadius="xl" />
+                  ))}
+                </VStack>
+              ) : isLoading && !isInitialLoad ? (
+                <Text className="text-gray-300 text-sm text-center">Loading chats...</Text>
+              ) : (
+                conversations.map(conv => {
+                  const unreadCount = conv.messages.filter(msg => msg.sender_username === conv.username && !msg.is_read && msg.type !== 'friend_request').length;
+                  const isOnline = onlineUsers[conv.username] || false;
+                  const isTyping = typingUsers[conv.username] || false;
+                  return (
+                    <MotionBox
+                      key={conv.username}
+                      className="p-4 bg-white/10 rounded-xl hover:bg-white/15 cursor-pointer glow-effect w-full sidebar-item border border-white/25"
+                      onClick={() => selectConversation(conv.username)}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      whileHover={{ scale: 1.02 }}
+                    >
+                      <Flex justify="space-between" align="center" w="full">
+                        <HStack spacing={4}>
+                          <Avatar name={conv.username} className="bg-gradient-to-r from-pink-500 to-purple-500 w-10 h-10 ring-2 ring-white/30" />
+                          <VStack align="start" spacing={1}>
+                            <Text className={`font-medium ${currentTheme.text} text-base`}>{conv.username}</Text>
+                            {isTyping && (
+                              <Text className="typing-indicator">
+                                Typing <span className="typing-dots">
+                                  <span style={{ '--i': 1 }}>.</span>
+                                  <span style={{ '--i': 2 }}>.</span>
+                                  <span style={{ '--i': 3 }}>.</span>
+                                </span>
+                              </Text>
+                            )}
+                          </VStack>
+                        </HStack>
+                        <VStack align="end" spacing={1}>
+                          {unreadCount > 0 && (
+                            <Badge className={`${currentTheme.badge} ${currentTheme.text} rounded-full px-2 py-1 text-xs font-medium`}>
+                              {unreadCount}
+                            </Badge>
+                          )}
+                          <Text className={`text-xs ${isOnline ? 'text-emerald-300' : 'text-gray-400'}`}>
+                            {isOnline ? 'Online' : lastSeen[conv.username] ? `Last seen ${formatLastSeen(lastSeen[conv.username])}` : ''}
+                          </Text>
+                        </VStack>
+                      </Flex>
+                    </MotionBox>
+                  );
+                })
+              )}
+            </VStack>
+            <Tooltip label="View Friend Requests" placement="right">
               <MotionButton
-                onClick={() => setShowTimestamps(!showTimestamps)}
-                variant="outline"
-                color={accentColor}
-                borderColor={accentColor}
-                _hover={{ bg: hoverBg, color: buttonHoverBg }}
+                onClick={onFriendRequestsOpen}
+                className={`w-full p-4 ${currentTheme.button} ${currentTheme.text} rounded-lg ${currentTheme.hover} transition-all text-base font-semibold`}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                aria-label="View friend requests"
               >
-                {showTimestamps ? 'Hide Time' : 'Show Time'}
+                Friend Requests {friendRequestCount > 0 && `(${friendRequestCount})`}
               </MotionButton>
-            </HStack>
-            <Box
-              ref={chatContainerRef}
-              flex={1}
-              p={{ base: 3, md: 4 }}
-              overflowY="auto"
-              bg={bgColor}
-              sx={{ '&::-webkit-scrollbar': { width: '6px' }, '&::-webkit-scrollbar-thumb': { bg: accentColor, borderRadius: 'full' } }}
-            >
-              {isLoading && (
-                <Flex justify="center" align="center" h="full">
-                  <Spinner size="xl" color={accentColor} thickness="4px" />
-                </Flex>
-              )}
-              <AnimatePresence>
-                {conversations.find(c => c.username === selectedUser)?.messages.map((msg) => (
-                  <SlideFade key={msg.id} in={true}>
-                    <Flex
-                      justify={msg.sender_username === currentUsername ? 'flex-end' : 'flex-start'}
-                      align="flex-start"
-                      mb={4}
-                    >
-                      <MotionBox
-                        data-message-id={msg.id}
-                        className="message-bubble"
-                        p={msg.type === 'image' || msg.type === 'audio' ? 2 : 3}
-                        bg={msg.sender_username === currentUsername ? senderBubble : receiverBubble}
-                        borderRadius="xl"
-                        maxW={{ base: '80%', md: '70%' }}
-                        shadow="md"
-                        _hover={{ '& .action-buttons': { opacity: 1 }, boxShadow: glowShadow }}
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.3 }}
-                      >
-                        {editingMessage && editingMessage.id === msg.id ? (
-                          <VStack spacing={2}>
-                            <Input
-                              value={editingMessage.content}
-                              onChange={(e) => setEditingMessage({ ...editingMessage, content: e.target.value })}
-                              bg={glassBg}
-                              border="1px solid"
-                              borderColor={accentColor}
-                              p={4}
-                              color={textColor}
-                              _focus={{ borderColor: accentColor, boxShadow: glowShadow }}
-                              borderRadius="lg"
-                              autoFocus
-                            />
-                            <HStack>
-                              <MotionButton
-                                onClick={() => editMessage(msg.id)}
-                                bg={buttonBg}
-                                color={primaryText}
-                                size="sm"
-                                _hover={{ bg: buttonHoverBg }}
-                                whileHover={{ scale: 1.05 }}
-                              >
-                                Save
-                              </MotionButton>
-                              <MotionButton
-                                onClick={() => setEditingMessage(null)}
-                                bg={secondaryText}
-                                color={primaryText}
-                                size="sm"
-                                whileHover={{ scale: 1.05 }}
-                              >
-                                Cancel
-                              </MotionButton>
-                            </HStack>
-                          </VStack>
-                        ) : (
-                          <>
-                            {msg.type === 'image' ? (
-                              <Box
-                                as="button"
-                                onClick={() => handleImageClick(msg.content)}
-                                borderRadius="lg"
-                                overflow="hidden"
-                                _hover={{ transform: 'scale(1.02)' }}
-                                transition="all 0.3s"
-                              >
-                                <img
-                                  src={msg.content}
-                                  alt="Sent image"
-                                  style={{ maxWidth: '100%', borderRadius: 'lg', maxHeight: '300px', objectFit: 'cover' }}
-                                />
-                              </Box>
-                            ) : msg.type === 'audio' ? (
-                              <VStack spacing={2} align="start">
-                                <HStack spacing={2}>
-                                  <IconButton
-                                    icon={playingAudio === msg.id ? <FaPause /> : <FaPlay />}
-                                    size="sm"
-                                    variant="ghost"
-                                    color={textColor}
-                                    _hover={{ color: accentColor }}
-                                    onClick={() => toggleAudioPlay(msg.id)}
-                                  />
-                                  <audio
-                                    ref={(el) => (audioRefs.current[msg.id] = el)}
-                                    src={msg.content}
-                                    onTimeUpdate={(e) => {
-                                      const audio = e.target;
-                                      audio.progress = (audio.currentTime / audio.duration) * 100;
-                                    }}
-                                    onEnded={() => setPlayingAudio(null)}
-                                    style={{ display: 'none' }}
-                                  />
-                                  <Progress
-                                    value={audioRefs.current[msg.id]?.progress || 0}
-                                    size="xs"
-                                    w={{ base: '120px', md: '200px' }}
-                                    colorScheme="cyan"
-                                    borderRadius="full"
-                                  />
-                                  <Text color={secondaryTextColor} fontSize="xs">{formatTime(Math.floor(audioRefs.current[msg.id]?.duration || 0))}</Text>
-                                </HStack>
-                              </VStack>
-                            ) : (
-                              <Text color={textColor} fontSize="md">{msg.content}</Text>
-                            )}
-                            <HStack justify="space-between" mt={1} fontSize="xs" color={secondaryTextColor}>
-                              {showTimestamps && <Text>{formatTimestamp(msg.timestamp)}</Text>}
-                              {msg.sender_username === currentUsername && msg.type !== 'friend_request' && (
-                                <Text>{msg.is_read ? '✓✓' : '✓'}</Text>
-                              )}
-                            </HStack>
-                            {msg.sender_username === currentUsername && msg.type !== 'friend_request' && (
-                              <HStack
-                                className="action-buttons"
-                                position="absolute"
-                                top={1}
-                                right={1}
-                                opacity={0}
-                                transition="opacity 0.2s"
-                                spacing={1}
-                              >
-                                {msg.type === 'text' && (
-                                  <Tooltip label="Edit">
-                                    <IconButton
-                                      icon={<FaPen />}
-                                      size="xs"
-                                      bg={senderBubble}
-                                      color={textColor}
-                                      borderRadius="full"
-                                      _hover={{ bg: accentColor, color: primaryText }}
-                                      onClick={() => setEditingMessage({ id: msg.id, content: msg.content })}
-                                    />
-                                  </Tooltip>
-                                )}
-                                <Tooltip label="Delete">
-                                  <IconButton
-                                    icon={<FaTrashAlt />}
-                                    size="xs"
-                                    bg={senderBubble}
-                                    color={textColor}
-                                    borderRadius="full"
-                                    _hover={{ bg: errorColor, color: primaryText }}
-                                    onClick={() => { setShowDeleteModal(msg.id); onDeleteOpen(); }}
-                                  />
-                                </Tooltip>
-                              </HStack>
-                            )}
-                          </>
-                        )}
-                      </MotionBox>
-                    </Flex>
-                  </SlideFade>
-                ))}
-              </AnimatePresence>
-              {isTyping && (
-                <Flex align="center" mb={4}>
-                  <Text color={secondaryTextColor} mr={2}>{selectedUser} is typing</Text>
-                  <HStack spacing={1}>
-                    {Array(3).fill().map((_, i) => (
-                      <MotionBox key={i} w={2} h={2} bg={accentColor} borderRadius="full" animate={{ y: [-2, 2] }} transition={{ duration: 0.4, repeat: Infinity, delay: i * 0.2 }} />
-                    ))}
-                  </HStack>
-                </Flex>
-              )}
-              <div ref={messagesEndRef} />
-            </Box>
-            <HStack
-              p={{ base: 3, md: 4 }}
-              bg={secondaryBg}
-              borderTop={`1px solid ${borderColor}`}
-              position="sticky"
-              bottom={0}
-              zIndex={10}
-              spacing={3}
-            >
-              <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/jpeg,image/png,image/gif" onChange={handleImageUpload} />
-              <IconButton
-                icon={<FaPaperclip />}
-                variant="ghost"
-                color={accentColor}
-                _hover={{ color: buttonHoverBg }}
-                onClick={() => fileInputRef.current.click()}
-                isDisabled={isRecording || audioBlob}
-              />
-              {!isRecording && !audioBlob ? (
-                <>
-                  <Input
-                    value={messageContent}
-                    onChange={(e) => { setMessageContent(e.target.value); debouncedTyping(); }}
-                    onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                    bg={glassBg}
-                    border="1px solid"
-                    borderColor={accentColor}
-                    p={6}
-                    borderRadius="full"
-                    placeholder="Send a message..."
-                    color={textColor}
-                    _focus={{ borderColor: accentColor, boxShadow: glowShadow }}
-                    flex={1}
-                  />
-                  <Popover placement="top-start">
-                    <PopoverTrigger>
-                      <IconButton
-                        icon={<FaSmile />}
-                        variant="ghost"
-                        color={accentColor}
-                        _hover={{ color: buttonHoverBg }}
-                      />
-                    </PopoverTrigger>
-                    <PopoverContent bg={glassBg} border="none" boxShadow={glowShadow}>
-                      <PopoverBody p={0}>
-                        <EmojiPicker onEmojiClick={handleEmojiClick} />
-                      </PopoverBody>
-                    </PopoverContent>
-                  </Popover>
-                </>
-              ) : isRecording ? (
-                <Flex flex={1} align="center" bg={glassBg} p={3} borderRadius="full" border="1px solid" borderColor={accentColor}>
-                  <Text color={errorColor} mr={2}>{formatTime(recordingTime)}</Text>
-                  <HStack spacing={1}>
-                    {Array.from({ length: 8 }).map((_, i) => (
-                      <MotionBox
-                        key={i}
-                        w={1}
-                        bg={errorColor}
-                        borderRadius="full"
-                        animate={{ height: [4, 8, 4] }}
-                        transition={{ duration: 0.4, repeat: Infinity, delay: i * 0.08 }}
-                      />
-                    ))}
-                  </HStack>
-                  <MotionButton
-                    ml={3}
+            </Tooltip>
+            <HStack w="full" justify="space-between">
+              <Tooltip label="Change Theme" placement="right">
+                <Menu>
+                  <MenuButton
+                    as={IconButton}
+                    icon={<FaPalette />}
+                    className="text-purple-300 hover:text-purple-400 transition-colors"
+                    aria-label="Change theme"
                     size="sm"
-                    bg={errorColor}
-                    color={primaryText}
-                    onClick={stopRecording}
-                    leftIcon={<FaStop />}
-                    whileHover={{ scale: 1.05 }}
+                  />
+                  <MenuList className="bg-gray-800 text-white">
+                    <MenuItem onClick={() => setTheme('neon')} className="hover:bg-gray-700">Neon</MenuItem>
+                    {/* Add more themes here in the future */}
+                  </MenuList>
+                </Menu>
+              </Tooltip>
+              <Tooltip label="Log Out" placement="right">
+                <IconButton
+                  icon={<FaSignOutAlt />}
+                  onClick={() => {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('username');
+                    setToken(null);
+                    setCurrentUsername('');
+                    if (socketRef.current) socketRef.current.close();
+                    toast({ title: 'Logged Out', status: 'info', duration: 2000, isClosable: true });
+                  }}
+                  className="text-purple-300 hover:text-purple-400 transition-colors"
+                  aria-label="Log out"
+                  size="sm"
+                />
+              </Tooltip>
+            </HStack>
+            <VStack spacing={3} w="full">
+              <Text className={`text-sm font-semibold ${currentTheme.text}`}>Suggested Friends</Text>
+              {suggestedFriends.length > 0 ? (
+                suggestedFriends.map(friend => (
+                  <MotionBox
+                    key={friend.id}
+                    className="p-4 bg-white/10 rounded-xl hover:bg-white/15 w-full friend-request-item sidebar-item border border-white/25"
+                    whileHover={{ scale: 1.02 }}
                   >
-                    Stop
-                  </MotionButton>
+                    <Flex justify="space-between" align="center">
+                      <Text className={`font-medium ${currentTheme.text} text-base`}>{friend.username}</Text>
+                      <Tooltip label={`Send friend request to ${friend}`} placement="right">
+                        <IconButton
+                          icon={<FaUserPlus />}
+                          onClick={() => sendFriendRequest(friend.username)}
+                          className="text-purple-300 hover:text-purple-400 transition-colors"
+                          aria-label={`Send friend request to ${friend.username}`}
+                          size="sm"
+                        />
+                      </Tooltip>
+                    </Flex>
+                  </MotionBox>
+                ))
+              ) : (
+                <Text className="text-gray-300 text-sm text-center">No suggestions available</Text>
+              )}
+            </VStack>
+          </VStack>
+        )}
+      </MotionBox>
+      <Box className={`flex-1 flex flex-col ${currentTheme.secondary}`}>
+        {selectedUser ? (
+          <>
+            <Flex
+              className={`p-4 ${currentTheme.secondary} border-b border-white/10`}
+              justify="space-between"
+              align="center"
+            >
+              <HStack spacing={4}>
+                <IconButton
+                  icon={<FaBars />}
+                  onClick={() => setIsSidebarOpen(true)}
+                  className="text-purple-300 hover:text-purple-400 transition-colors"
+                  aria-label="Open sidebar"
+                  size="sm"
+                />
+                <Avatar name={selectedUser} className="bg-gradient-to-r from-pink-500 to-purple-500 w-12 h-12 ring-2 ring-white/30" />
+                <VStack align="start" spacing={1}>
+                  <Text className={`font-semibold ${currentTheme.text} text-lg`}>{selectedUser}</Text>
+                  <Text className={`text-sm ${onlineUsers[selectedUser] ? 'text-emerald-300' : 'text-gray-400'}`}>
+                    {onlineUsers[selectedUser] ? 'Online' : lastSeen[selectedUser] ? `Last seen ${formatLastSeen(lastSeen[selectedUser])}` : 'Offline'}
+                  </Text>
+                </VStack>
+              </HStack>
+              <Tooltip label={`Delete conversation with ${selectedUser}`} placement="left">
+                <Button
+                  onClick={() => setShowDeleteConversationModal(selectedUser)}
+                  className="text-red-400 hover:text-red-500 transition-colors text-sm font-medium"
+                  aria-label={`Delete conversation with ${selectedUser}`}
+                >
+                  Delete Chat
+                </Button>
+              </Tooltip>
+            </Flex>
+            <Box ref={chatContainerRef} className="flex-1 p-6 chat-container">
+              {isInitialLoad ? (
+                <VStack spacing={4} p={4}>
+                  {[...Array(5)].map((_, i) => (
+                    <HStack key={i} w="full" justify={i % 2 === 0 ? 'flex-start' : 'flex-end'}>
+                      <SkeletonCircle size="10" />
+                      <SkeletonText noOfLines={2} width={i % 2 === 0 ? '60%' : '40%'} />
+                    </HStack>
+                  ))}
+                </VStack>
+              ) : isLoading ? (
+                <Flex justify="center" align="center" h="full">
+                  <Spinner size="lg" color="purple.400" />
                 </Flex>
               ) : (
-                <Flex flex={1} align="center" bg={glassBg} p={3} borderRadius="full" border="1px solid" borderColor={accentColor}>
-                  <audio controls src={URL.createObjectURL(audioBlob)} style={{ width: '100%', maxWidth: '300px' }} />
-                  <HStack ml={3}>
-                    <MotionButton
-                      size="sm"
-                      bg={buttonBg}
-                      color={primaryText}
-                      _hover={{ bg: buttonHoverBg }}
-                      onClick={sendAudioMessage}
-                      whileHover={{ scale: 1.05 }}
-                    >
-                      Send
-                    </MotionButton>
-                    <MotionButton
-                      size="sm"
-                      bg={secondaryText}
-                      color={primaryText}
-                      onClick={() => setAudioBlob(null)}
-                      whileHover={{ scale: 1.05 }}
-                    >
-                      Cancel
-                    </MotionButton>
-                  </HStack>
-                </Flex>
+                <VStack spacing={4} align="stretch">
+                  {conversations.find(c => c.username === selectedUser)?.messages.map((msg, index, messages) => {
+                    const isSender = msg.sender_username === currentUsername;
+                    const prevMessage = index > 0 ? messages[index - 1] : null;
+                    const showTimestamp = showTimestamps && (!prevMessage || new Date(msg.timestamp).toLocaleDateString() !== new Date(prevMessage.timestamp).toLocaleDateString());
+                    const isPinned = pinnedMessages.includes(msg.id);
+                    return (
+                      <React.Fragment key={msg.id || msg.tempId}>
+                        {showTimestamp && (
+                          <Text className="date-header">
+                            {new Date(msg.timestamp).toLocaleDateString()}
+                          </Text>
+                        )}
+                        <SlideFade in={true} offsetY={20} className="new-message">
+                          <Flex justify={isSender ? 'flex-end' : 'flex-start'}>
+                            <Box
+                              className={`message-bubble ${isSender ? 'self' : 'other'} ${isSender ? currentTheme.bubbleSelf : currentTheme.bubbleOther}`}
+                              data-message-id={msg.id}
+                            >
+                              <VStack align={isSender ? 'end' : 'start'} spacing={3}>
+                                {msg.type === 'text' && (
+                                  <Text
+                                    className={`${currentTheme.text} text-base ${editingMessage?.id === msg.id ? 'bg-white/20 p-3 rounded-lg' : ''}`}
+                                    onDoubleClick={() => isSender && setEditingMessage({ id: msg.id, content: msg.content })}
+                                  >
+                                    {editingMessage?.id === msg.id ? (
+                                      <Input
+                                        value={editingMessage.content}
+                                        onChange={(e) => setEditingMessage({ ...editingMessage, content: e.target.value })}
+                                        onKeyPress={(e) => e.key === 'Enter' && editMessage(msg.id)}
+                                        className={`${currentTheme.text} bg-transparent border border-white/30 rounded-lg text-base`}
+                                        aria-label="Edit message"
+                                      />
+                                    ) : (
+                                      msg.content
+                                    )}
+                                  </Text>
+                                )}
+                                {msg.type === 'image' && (
+                                  <Image
+                                    src={msg.content}
+                                    alt="Chat image"
+                                    className="max-w-[250px] rounded-lg cursor-pointer shadow-lg hover:shadow-xl transition-shadow"
+                                    onClick={() => handleImageClick(msg.content)}
+                                  />
+                                )}
+                                {msg.type === 'audio' && (
+                                  <HStack spacing={3}>
+                                    <Button
+                                      onClick={() => toggleAudioPlay(msg.id)}
+                                      className="text-purple-300 hover:text-purple-400 transition-colors text-sm font-medium"
+                                      aria-label={playingAudio === msg.id ? 'Pause audio' : 'Play audio'}
+                                    >
+                                      {playingAudio === msg.id ? 'Pause' : 'Play'}
+                                    </Button>
+                                    <audio
+                                      ref={el => (audioRefs.current[msg.id] = el)}
+                                      src={msg.content}
+                                      onEnded={() => setPlayingAudio(null)}
+                                    />
+                                  </HStack>
+                                )}
+                                <HStack spacing={3} className="actions opacity-0 transition-opacity">
+                                  {isSender && (
+                                    <>
+                                      <Tooltip label={isPinned ? 'Unpin Message' : 'Pin Message'} placement="top">
+                                        <IconButton
+                                          icon={<FaStar />}
+                                          onClick={() => pinMessage(msg.id)}
+                                          className="text-yellow-400 hover:text-yellow-500 transition-colors"
+                                          size="xs"
+                                          aria-label={isPinned ? 'Unpin message' : 'Pin message'}
+                                        />
+                                      </Tooltip>
+                                      <Tooltip label="Edit Message" placement="top">
+                                        <IconButton
+                                          icon={<FaEdit />}
+                                          onClick={() => setEditingMessage({ id: msg.id, content: msg.content })}
+                                          className="text-purple-300 hover:text-purple-400 transition-colors"
+                                          size="xs"
+                                          aria-label="Edit message"
+                                        />
+                                      </Tooltip>
+                                      <Tooltip label="React with Heart" placement="top">
+                                        <IconButton
+                                          icon={<FaHeart />}
+                                          onClick={() => reactToMessage(msg.id, '❤️')}
+                                          className="text-red-400 hover:text-red-500 transition-colors"
+                                          size="xs"
+                                          aria-label="React with heart"
+                                        />
+                                      </Tooltip>
+                                    </>
+                                  )}
+                                  {(isSender || msg.recipient_username === currentUsername) && (
+                                    <Tooltip label="Delete Message" placement="top">
+                                      <IconButton
+                                        icon={<FaTrash />}
+                                        onClick={() => {
+                                          setShowDeleteModal(msg.id);
+                                          onDeleteOpen();
+                                        }}
+                                        className="text-red-400 hover:text-red-500 transition-colors"
+                                        size="xs"
+                                        aria-label="Delete message"
+                                      />
+                                    </Tooltip>
+                                  )}
+                                </HStack>
+                                {msg.reactions?.length > 0 && (
+                                  <HStack spacing={2}>
+                                    {msg.reactions.map((reaction, i) => (
+                                      <Text key={i} className="text-sm">{reaction}</Text>
+                                    ))}
+                                  </HStack>
+                                )}
+                                <HStack spacing={3}>
+                                  <Text className="text-xs text-gray-300">
+                                    {formatTimestamp(msg.timestamp)}
+                                  </Text>
+                                  {isSender && (
+                                    <Text className="text-xs text-emerald-400 animate-pulse">
+                                      {msg.is_read ? '✓✓' : '✓'}
+                                    </Text>
+                                  )}
+                                </HStack>
+                              </VStack>
+                            </Box>
+                          </Flex>
+                        </SlideFade>
+                      </React.Fragment>
+                    );
+                  })}
+                  {typingUsers[selectedUser] && (
+                    <HStack className="p-4">
+                      <Avatar name={selectedUser} className="bg-gradient-to-r from-pink-500 to-purple-500 w-10 h-10 ring-2 ring-white/30" />
+                      <Text className="typing-indicator">
+                        {selectedUser} is typing
+                        <span className="typing-dots">
+                          <span style={{ '--i': 1 }}>.</span>
+                          <span style={{ '--i': 2 }}>.</span>
+                          <span style={{ '--i': 3 }}>.</span>
+                        </span>
+                      </Text>
+                    </HStack>
+                  )}
+                  <div ref={messagesEndRef} />
+                </VStack>
               )}
-              <IconButton
-                icon={isRecording ? <FaStop /> : <FaMicrophone />}
-                variant="ghost"
-                color={isRecording ? errorColor : accentColor}
-                _hover={{ color: isRecording ? '#E02A20' : buttonHoverBg }}
-                onClick={isRecording ? stopRecording : startRecording}
-                isDisabled={audioBlob}
-                css={isRecording ? { animation: `${pulse} 1s infinite` } : {}}
-              />
-              {!isRecording && !audioBlob && (
-                <MotionButton
-                  leftIcon={<FaPaperPlane />}
-                  onClick={() => sendMessage()}
-                  bg={buttonBg}
-                  color={primaryText}
-                  borderRadius="full"
-                  _hover={{ bg: buttonHoverBg, transform: 'scale(1.05)' }}
-                  isLoading={isLoading}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  Send
-                </MotionButton>
+            </Box>
+            <HStack className={`p-4 ${currentTheme.secondary} input-container`} spacing={3}>
+              {isRecording ? (
+                <HStack w="full" spacing={4}>
+                  <Text className="text-red-400 font-semibold text-sm">{formatTime(recordingTime)}</Text>
+                  <Box className="recording-progress flex-1" />
+                  <Button
+                    onClick={stopRecording}
+                    className="text-red-400 hover:text-red-500 transition-colors text-sm font-medium"
+                    aria-label="Stop recording"
+                  >
+                    Stop
+                  </Button>
+                </HStack>
+              ) : audioBlob ? (
+                <HStack w="full" spacing={3}>
+                  <Button
+                    onClick={sendAudioMessage}
+                    className="text-emerald-400 hover:text-emerald-500 transition-colors text-sm font-medium"
+                    aria-label="Send audio"
+                  >
+                    Send Audio
+                  </Button>
+                  <Button
+                    onClick={() => setAudioBlob(null)}
+                    className="text-red-400 hover:text-red-500 transition-colors text-sm font-medium"
+                    aria-label="Cancel audio"
+                  >
+                    Cancel
+                  </Button>
+                </HStack>
+              ) : (
+                <>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    ref={fileInputRef}
+                    style={{ display: 'none' }}
+                    onChange={handleImageUpload}
+                  />
+                  <Tooltip label="Upload Image" placement="top">
+                    <IconButton
+                      icon={<FaPaperclip />}
+                      onClick={() => fileInputRef.current.click()}
+                      className="text-purple-300 hover:text-purple-400 transition-colors"
+                      aria-label="Upload image"
+                      size="sm"
+                    />
+                  </Tooltip>
+                  <Tooltip label="Record Audio" placement="top">
+                    <IconButton
+                      icon={<FaMicrophone />}
+                      onClick={startRecording}
+                      className="text-purple-300 hover:text-purple-400 transition-colors"
+                      aria-label="Start recording"
+                      size="sm"
+                    />
+                  </Tooltip>
+                  <Tooltip label="Pick Emoji" placement="top">
+                    <Popover>
+                      <PopoverTrigger>
+                        <IconButton
+                          icon={<FaSmile />}
+                          className="text-purple-300 hover:text-purple-400 transition-colors"
+                          aria-label="Open emoji picker"
+                          size="sm"
+                        />
+                      </PopoverTrigger>
+                      <PopoverContent className="bg-gray-800">
+                        <PopoverBody>
+                          <EmojiPicker onEmojiClick={handleEmojiClick} />
+                        </PopoverBody>
+                      </PopoverContent>
+                    </Popover>
+                  </Tooltip>
+                  <Input
+                    value={messageContent}
+                    onChange={(e) => {
+                      setMessageContent(e.target.value);
+                      debouncedTyping();
+                    }}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        sendMessage();
+                      }
+                    }}
+                    placeholder="Type a message..."
+                    className={`flex-1 p-4 rounded-lg ${currentTheme.input} ${currentTheme.text} placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all text-base`}
+                    aria-label="Message input"
+                  />
+                  <Tooltip label="Send Message" placement="top">
+                    <IconButton
+                      icon={<FaArrowUp />}
+                      onClick={() => sendMessage()}
+                      className={`${currentTheme.button} ${currentTheme.text} ${currentTheme.hover} transition-all`}
+                      disabled={messageContent.trim().length === 0}
+                      aria-label="Send message"
+                      size="sm"
+                    />
+                  </Tooltip>
+                </>
               )}
             </HStack>
           </>
         ) : (
-          <Flex flex={1} align="center" justify="center" bg={bgColor}>
-            <MotionBox
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5 }}
-              textAlign="center"
-              color={secondaryTextColor}
-              fontSize={{ base: 'lg', md: 'xl' }}
-              fontWeight="bold"
-              p={6}
-            >
-              Select a Friend to Start Chatting
-            </MotionBox>
+          <Flex className="flex-1 items-center justify-center">
+            <Text className="text-gray-300 text-xl font-medium">Select a friend to start chatting!</Text>
           </Flex>
         )}
-      </Flex>
-
-      <Modal isOpen={isFriendRequestsOpen} onClose={onFriendRequestsClose} size={{ base: 'full', md: 'lg' }}>
+      </Box>
+      <Modal isOpen={isDeleteOpen} onClose={onDeleteClose} size="sm">
         <ModalOverlay />
-        <ModalContent bg={secondaryBg} borderRadius={{ base: 0, md: 'xl' }}>
-          <ModalHeader>
-            <HStack justify="space-between">
-              <Text fontSize="xl" fontWeight="bold" color={textColor}>Friend Requests</Text>
-              <IconButton
-                icon={<FaTimes />}
-                variant="ghost"
-                color={secondaryTextColor}
-                _hover={{ color: accentColor }}
-                onClick={onFriendRequestsClose}
-              />
-            </HStack>
-          </ModalHeader>
-          <ModalBody>
-            <Tabs variant="soft-rounded" colorScheme="cyan">
-              <TabList mb={4}>
-                <Tab>Requests ({friendRequestCount})</Tab>
-                <Tab>Suggestions</Tab>
-              </TabList>
-              <TabPanels>
-                <TabPanel p={0}>
-                  <VStack spacing={3}>
-                    <AnimatePresence>
-                      {friendRequests.map(req => (
-                        <MotionBox
-                          key={req.id}
-                          w="full"
-                          p={3}
-                          bg={hoverBg}
-                          borderRadius="lg"
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0 }}
-                        >
-                          <HStack justify="space-between" align="center">
-                            <HStack spacing={3}>
-                              <Avatar size="md" name={req.sender_username} />
-                              <VStack align="start" spacing={0}>
-                                <Text fontWeight="bold" color={textColor}>{req.sender_username}</Text>
-                                <Text fontSize="sm" color={secondaryTextColor}>Sent you a request</Text>
-                              </VStack>
-                            </HStack>
-                            <HStack spacing={2}>
-                              <MotionButton
-                                size="sm"
-                                bg={buttonBg}
-                                color={primaryText}
-                                leftIcon={<FaCheck />}
-                                onClick={() => respondFriendRequest(req.id, true)}
-                                whileHover={{ scale: 1.05 }}
-                              >
-                                Accept
-                              </MotionButton>
-                              <MotionButton
-                                size="sm"
-                                variant="outline"
-                                colorScheme="gray"
-                                onClick={() => respondFriendRequest(req.id, false)}
-                                whileHover={{ scale: 1.05 }}
-                              >
-                                Decline
-                              </MotionButton>
-                            </HStack>
-                          </HStack>
-                        </MotionBox>
-                      ))}
-                    </AnimatePresence>
-                    {friendRequests.length === 0 && (
-                      <Text textAlign="center" color={secondaryTextColor}>No pending requests</Text>
-                    )}
-                  </VStack>
-                </TabPanel>
-                <TabPanel p={0}>
-                  <VStack spacing={3}>
-                    {suggestedFriends.map(user => (
-                      <MotionBox
-                        key={user.id}
-                        w="full"
-                        p={3}
-                        bg={hoverBg}
-                        borderRadius="lg"
-                      >
-                        <HStack justify="space-between">
-                          <HStack spacing={3}>
-                            <Avatar size="md" name={user.username} />
-                            <Text fontWeight="bold" color={textColor}>{user.username}</Text>
-                          </HStack>
-                          <MotionButton
-                            size="sm"
-                            leftIcon={<FaUserPlus />}
-                            bg={buttonBg}
-                            color={primaryText}
-                            onClick={() => sendFriendRequest(user.username)}
-                            whileHover={{ scale: 1.05 }}
-                          >
-                            Add
-                          </MotionButton>
-                        </HStack>
-                      </MotionBox>
-                    ))}
-                    {suggestedFriends.length === 0 && (
-                      <Text textAlign="center" color={secondaryTextColor}>No suggestions available</Text>
-                    )}
-                  </VStack>
-                </TabPanel>
-              </TabPanels>
-            </Tabs>
+        <ModalContent className="modal-content">
+          <ModalHeader className={`modal-header ${currentTheme.modalHeader}`}>Delete Message</ModalHeader>
+          <ModalBody className="modal-body">
+            <Text className={`${currentTheme.text} text-base`}>Are you sure you want to delete this message?</Text>
           </ModalBody>
-        </ModalContent>
-      </Modal>
-
-      <Modal isOpen={isDeleteOpen} onClose={onDeleteClose}>
-        <ModalOverlay bg="blackAlpha.800" />
-        <ModalContent bg={glassBg} borderRadius="xl" boxShadow={glowShadow}>
-          <ModalHeader color={textColor}>Delete Message?</ModalHeader>
-          <ModalBody color={secondaryTextColor}>Are you sure you want to delete this message?</ModalBody>
-          <ModalFooter>
-            <MotionButton variant="ghost" onClick={onDeleteClose} mr={3} color={secondaryTextColor} _hover={{ color: accentColor }} whileHover={{ scale: 1.05 }}>Cancel</MotionButton>
-            <MotionButton bg={errorColor} color={primaryText} onClick={() => deleteMessage(showDeleteModal)} isLoading={isLoading} whileHover={{ scale: 1.05 }}>Delete</MotionButton>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-
-      <Modal isOpen={isConvDeleteOpen} onClose={onConvDeleteClose}>
-        <ModalOverlay bg="blackAlpha.800" />
-        <ModalContent bg={glassBg} borderRadius="xl" boxShadow={glowShadow}>
-          <ModalHeader color={textColor}>Delete Conversation?</ModalHeader>
-          <ModalBody color={secondaryTextColor}>Are you sure you want to delete your chat with {showDeleteConversationModal}?</ModalBody>
-          <ModalFooter>
-            <MotionButton variant="ghost" onClick={onConvDeleteClose} mr={3} color={secondaryTextColor} _hover={{ color: accentColor }} whileHover={{ scale: 1.05 }}>Cancel</MotionButton>
-            <MotionButton bg={errorColor} color={primaryText} onClick={() => deleteConversation(showDeleteConversationModal)} isLoading={isLoading} whileHover={{ scale: 1.05 }}>Delete</MotionButton>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-
-      <Modal isOpen={isImageOpen} onClose={onImageClose} size="full">
-        <ModalOverlay bg="blackAlpha.800" />
-        <ModalContent bg="transparent" boxShadow="none">
-          <ModalBody display="flex" alignItems="center" justifyContent="center" p={0}>
-            <MotionBox
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ duration: 0.5 }}
+          <ModalFooter className="modal-footer">
+            <Button
+              onClick={onDeleteClose}
+              className="text-purple-300 hover:text-purple-400 transition-colors mr-3 text-sm font-medium"
+              aria-label="Cancel delete"
             >
-              <Image
-                src={expandedImage}
-                alt="Expanded image"
-                maxH="90vh"
-                maxW="90vw"
-                objectFit="contain"
-                borderRadius="lg"
-                boxShadow={glowShadow}
-                onClick={onImageClose}
-                cursor="pointer"
-              />
-            </MotionBox>
-          </ModalBody>
-          <ModalFooter>
-            <MotionButton bg={secondaryText} color={primaryText} onClick={onImageClose} whileHover={{ scale: 1.05 }}>Close</MotionButton>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => deleteMessage(showDeleteModal)}
+              className="bg-red-500 hover:bg-red-600 text-white transition-colors text-sm font-medium"
+              aria-label="Confirm delete"
+            >
+              Delete
+            </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
-    </Flex>
+      <Modal isOpen={isConvDeleteOpen} onClose={onConvDeleteClose} size="sm">
+        <ModalOverlay />
+        <ModalContent className="modal-content">
+          <ModalHeader className={`modal-header ${currentTheme.modalHeader}`}>Delete Conversation</ModalHeader>
+          <ModalBody className="modal-body">
+            <Text className={`${currentTheme.text} text-base`}>Are you sure you want to delete the conversation with {showDeleteConversationModal}?</Text>
+          </ModalBody>
+          <ModalFooter className="modal-footer">
+            <Button
+              onClick={onConvDeleteClose}
+              className="text-purple-300 hover:text-purple-400 transition-colors mr-3 text-sm font-medium"
+              aria-label="Cancel delete conversation"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => deleteConversation(showDeleteConversationModal)}
+              className="bg-red-500 hover:bg-red-600 text-white transition-colors text-sm font-medium"
+              aria-label="Confirm delete conversation"
+            >
+              Delete
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+      <Modal isOpen={isImageOpen} onClose={onImageClose} size="xl">
+        <ModalOverlay />
+        <ModalContent className="modal-content bg-transparent">
+          <ModalBody className="modal-body p-0">
+            <Image src={expandedImage} alt="Expanded chat image" className="w-full rounded-lg shadow-2xl" />
+          </ModalBody>
+          <ModalFooter className="modal-footer">
+            <Button
+              onClick={onImageClose}
+              className="text-purple-300 hover:text-purple-400 transition-colors text-sm font-medium"
+              aria-label="Close image"
+            >
+              Close
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+      <Modal isOpen={isFriendRequestsOpen} onClose={onFriendRequestsClose} size="md">
+        <ModalOverlay />
+        <ModalContent className="modal-content">
+          <ModalHeader className={`modal-header ${currentTheme.modalHeader}`}>Friend Requests</ModalHeader>
+          <ModalBody className="modal-body">
+            <VStack spacing={4}>
+              {friendRequests.length > 0 ? (
+                friendRequests.map(req => (
+                  <MotionBox
+                    key={req.id}
+                    className="p-4 bg-white/10 rounded-xl w-full friend-request-item border border-white/25"
+                    whileHover={{ scale: 1.02 }}
+                  >
+                    <Flex justify="space-between" align="center">
+                      <Text className={`${currentTheme.text} text-base`}>
+                        {req.sender_username} wants to be your friend
+                      </Text>
+                      {req.status === 'pending' && req.recipient_username === currentUsername && (
+                        <HStack spacing={3}>
+                          <Tooltip label="Accept Friend Request" placement="top">
+                            <IconButton
+                              icon={<FaCheck />}
+                              onClick={() => respondFriendRequest(req.id, true)}
+                              className="text-emerald-400 hover:text-emerald-500 transition-colors"
+                              aria-label={`Accept friend request from ${req.sender_username}`}
+                              size="sm"
+                            />
+                          </Tooltip>
+                          <Tooltip label="Reject Friend Request" placement="top">
+                            <IconButton
+                              icon={<FaTimes />}
+                              onClick={() => respondFriendRequest(req.id, false)}
+                              className="text-red-400 hover:text-red-500 transition-colors"
+                              aria-label={`Reject friend request from ${req.sender_username}`}
+                              size="sm"
+                            />
+                          </Tooltip>
+                        </HStack>
+                      )}
+                    </Flex>
+                  </MotionBox>
+                ))
+              ) : (
+                <Text className="text-gray-300 text-base text-center">No friend requests at the moment.</Text>
+              )}
+            </VStack>
+          </ModalBody>
+          <ModalFooter className="modal-footer">
+            <Button
+              onClick={onFriendRequestsClose}
+              className="text-purple-300 hover:text-purple-400 transition-colors text-sm font-medium"
+              aria-label="Close friend requests"
+            >
+              Close
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+    </div>
   );
 }
 
