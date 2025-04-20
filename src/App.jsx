@@ -67,7 +67,7 @@ function App() {
   const { isOpen: isConvDeleteOpen, onClose: onConvDeleteClose } = useDisclosure();
   const { isOpen: isImageOpen, onOpen: onImageOpen, onClose: onImageClose } = useDisclosure();
   const { isOpen: isFriendRequestsOpen, onOpen: onFriendRequestsOpen, onClose: onFriendRequestsClose } = useDisclosure();
-  const [isMobile] = useMediaQuery('(max-width: 768px)'); // Detect mobile devices
+  const [isMobile] = useMediaQuery('(max-width: 768px)');
   const { isOpen: isDrawerOpen, onOpen: onDrawerOpen, onClose: onDrawerClose } = useDisclosure();
 
   const apiUrl = 'https://chitchat-server-emw5.onrender.com';
@@ -882,7 +882,6 @@ function App() {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  // Dynamic header adjustment for address bar
   const adjustHeaderPadding = useCallback(() => {
     if (headerRef.current) {
       const topInset = Math.max(window.innerHeight - document.documentElement.clientHeight, 0);
@@ -1474,196 +1473,194 @@ function App() {
                     whileTap={{ scale: 0.9 }}
                   />
                 </Tooltip>
-                <Avatar name={selectedUser} className="bg-gradient-to-r from-pink-500 to-purple-500 w-12 h-12 ring-2 ring-white/30" />
+                <Avatar name={selectedUser} className="bg-gradient-to-r from-pink-500 to-purple-500 w-10 h-10 ring-2 ring-white/30" />
                 <VStack align="start" spacing={0}>
-                  <Text className={`font-semibold ${currentTheme.text} text-xl whitespace-normal break-words max-w-[200px]`}>{selectedUser}</Text>
-                  <Text className={`text-sm ${onlineUsers[selectedUser] ? 'text-emerald-300' : 'text-gray-400'}`}>
-                    {onlineUsers[selectedUser] ? 'Online' : lastSeen[selectedUser] ? `Last seen ${formatLastSeen(lastSeen[selectedUser])}` : 'Offline'}
+                  <Text className={`font-semibold ${currentTheme.text} text-base`}>{selectedUser}</Text>
+                  <Text className={`text-xs ${onlineUsers[selectedUser] ? 'text-emerald-300' : 'text-gray-400'}`}>
+                    {onlineUsers[selectedUser] ? 'Online' : lastSeen[selectedUser] ? `Last seen ${formatLastSeen(lastSeen[selectedUser])}` : ''}
                   </Text>
                 </VStack>
               </HStack>
-              <Tooltip label={`Delete conversation with ${selectedUser}`} placement="left">
-                <Button
-                  onClick={() => setShowDeleteConversationModal(selectedUser)}
-                  className="text-red-400 hover:text-red-500 transition-colors text-sm font-medium"
-                  aria-label={`Delete conversation with ${selectedUser}`}
-                >
-                  Delete Chat
-                </Button>
-              </Tooltip>
+              <Menu>
+                <MenuButton
+                  as={IconButton}
+                  icon={<FaStar />}
+                  className="text-purple-300 hover:text-purple-400 transition-colors"
+                  aria-label="Conversation options"
+                  size="sm"
+                />
+                <MenuList className="bg-gray-800 text-white">
+                  <MenuItem
+                    onClick={() => setShowDeleteConversationModal(selectedUser)}
+                    className="hover:bg-gray-700"
+                  >
+                    <FaTrash /> Delete Conversation
+                  </MenuItem>
+                </MenuList>
+              </Menu>
             </Flex>
             <Box
               ref={chatContainerRef}
               className="chat-container pt-0 flex-1 overflow-y-auto"
-              style={{ paddingBottom: '100px' }}
+              style={{ paddingBottom: '80px' }} // Fixed to match input container height
             >
-              {isInitialLoad ? (
-                <VStack spacing={4} p={4}>
-                  {[...Array(5)].map((_, i) => (
-                    <HStack key={i} w="full" justify={i % 2 === 0 ? 'flex-start' : 'flex-end'}>
-                      <SkeletonCircle size="10" />
-                      <SkeletonText noOfLines={2} width={i % 2 === 0 ? '60%' : '40%'} />
-                    </HStack>
-                  ))}
-                </VStack>
-              ) : isLoading ? (
-                <Flex justify="center" align="center" h="full">
-                  <Spinner size="lg" color="purple.400" />
-                </Flex>
-              ) : (
-                <VStack spacing={4} align="stretch" p={4}>
-                  {conversations.find(c => c.username === selectedUser)?.messages.map((msg, index, messages) => {
-                    const isSender = msg.sender_username === currentUsername;
-                    const prevMessage = index > 0 ? messages[index - 1] : null;
-                    const showTimestamp = showTimestamps && (!prevMessage || new Date(msg.timestamp).toLocaleDateString() !== new Date(prevMessage.timestamp).toLocaleDateString());
-                    const isPinned = pinnedMessages.includes(msg.id);
-                    return (
-                      <React.Fragment key={msg.id || msg.tempId}>
-                        {showTimestamp && (
-                          <Text className="date-header">
-                            {new Date(msg.timestamp).toLocaleDateString()}
-                          </Text>
-                        )}
-                        <SlideFade in={true} offsetY={20} className="new-message">
-                          <Flex justify={isSender ? 'flex-end' : 'flex-start'}>
-                            <Box
-                              className={`message-bubble ${isSender ? 'self' : 'other'} ${isSender ? currentTheme.bubbleSelf : currentTheme.bubbleOther}`}
-                              data-message-id={msg.id}
-                            >
-                              <VStack align={isSender ? 'end' : 'start'} spacing={3}>
-                                {msg.type === 'text' && (
-                                  <Text
-                                    className={`${currentTheme.text} text-base ${editingMessage?.id === msg.id ? 'bg-white/20 p-3 rounded-lg' : ''}`}
-                                    onDoubleClick={() => isSender && setEditingMessage({ id: msg.id, content: msg.content })}
-                                  >
-                                    {editingMessage?.id === msg.id ? (
+              <AnimatePresence>
+                {isLoading && isInitialLoad ? (
+                  <VStack spacing={3} w="full" align="center" py={4}>
+                    {[...Array(3)].map((_, i) => (
+                      <Skeleton key={i} height="80px" w="80%" borderRadius="xl" />
+                    ))}
+                  </VStack>
+                ) : (
+                  <VStack spacing={2} w="full" align="stretch">
+                    {conversations
+                      .find(c => c.username === selectedUser)
+                      ?.messages.map((msg, index, arr) => {
+                        const prevMsg = arr[index - 1];
+                        const showDateHeader = !prevMsg || new Date(msg.timestamp).toDateString() !== new Date(prevMsg.timestamp).toDateString();
+                        const isSelf = msg.sender_username === currentUsername;
+                        const isPinned = pinnedMessages.includes(msg.id);
+
+                        return (
+                          <React.Fragment key={msg.id}>
+                            {showDateHeader && (
+                              <Text className="top-date-header">
+                                {new Date(msg.timestamp).toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
+                              </Text>
+                            )}
+                            <SlideFade in={true} unmountOnExit>
+                              <MotionBox
+                                className={`message-bubble ${isSelf ? 'self' : 'other'} ${currentTheme.bubbleSelf} ${!isSelf ? currentTheme.bubbleOther : ''} relative`}
+                                data-message-id={msg.id}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -20 }}
+                                transition={{ duration: 0.3 }}
+                              >
+                                {msg.type === 'image' ? (
+                                  <Image
+                                    src={msg.content}
+                                    alt="Sent image"
+                                    className="max-w-full h-auto rounded-lg cursor-pointer"
+                                    onClick={() => handleImageClick(msg.content)}
+                                    loading="lazy"
+                                  />
+                                ) : msg.type === 'audio' ? (
+                                  <audio
+                                    ref={el => (audioRefs.current[msg.id] = el)}
+                                    src={msg.content}
+                                    controls
+                                    className="w-full"
+                                    onPlay={() => toggleAudioPlay(msg.id)}
+                                    onPause={() => setPlayingAudio(null)}
+                                  />
+                                ) : (
+                                  <Text className={`text-sm ${currentTheme.text}`}>
+                                    {msg.content}
+                                    {editingMessage?.id === msg.id && (
                                       <Input
                                         value={editingMessage.content}
                                         onChange={(e) => setEditingMessage({ ...editingMessage, content: e.target.value })}
-                                        onKeyPress={(e) => e.key === 'Enter' && editMessage(msg.id)}
-                                        className={`${currentTheme.text} bg-transparent border border-white/30 rounded-lg text-base`}
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter' && !e.shiftKey) {
+                                            e.preventDefault();
+                                            editMessage(msg.id);
+                                          }
+                                        }}
+                                        className={`${currentTheme.input} ${currentTheme.text} mt-2`}
                                         aria-label="Edit message"
                                       />
-                                    ) : (
-                                      msg.content
                                     )}
                                   </Text>
                                 )}
-                                {msg.type === 'image' && (
-                                  <Image
-                                    src={msg.content}
-                                    alt="Chat image"
-                                    className="max-w-[250px] rounded-lg cursor-pointer shadow-lg hover:shadow-xl transition-shadow"
-                                    onClick={() => handleImageClick(msg.content)}
-                                  />
+                                {showTimestamps && (
+                                  <Text className={`text-xs ${currentTheme.text} mt-1 opacity-70`}>
+                                    {formatTimestamp(msg.timestamp)}
+                                  </Text>
                                 )}
-                                {msg.type === 'audio' && (
-                                  <HStack spacing={3}>
-                                    <Button
-                                      onClick={() => toggleAudioPlay(msg.id)}
-                                      className="text-purple-300 hover:text-purple-400 transition-colors text-sm font-medium"
-                                      aria-label={playingAudio === msg.id ? 'Pause audio' : 'Play audio'}
-                                    >
-                                      {playingAudio === msg.id ? 'Pause' : 'Play'}
-                                    </Button>
-                                    <audio
-                                      ref={el => (audioRefs.current[msg.id] = el)}
-                                      src={msg.content}
-                                      onEnded={() => setPlayingAudio(null)}
-                                    />
-                                  </HStack>
+                                {isPinned && (
+                                  <Text className="text-xs text-yellow-300 mt-1">Pinned</Text>
                                 )}
-                                <HStack spacing={3} className="actions opacity-0 transition-opacity">
-                                  {isSender && (
+                                <HStack className="actions absolute top-2 right-2 opacity-0 transition-opacity">
+                                  {isSelf && (
                                     <>
-                                      <Tooltip label={isPinned ? 'Unpin Message' : 'Pin Message'} placement="top">
-                                        <IconButton
-                                          icon={<FaStar />}
-                                          onClick={() => pinMessage(msg.id)}
-                                          className="text-yellow-400 hover:text-yellow-500 transition-colors"
-                                          size="xs"
-                                          aria-label={isPinned ? 'Unpin message' : 'Pin message'}
-                                        />
-                                      </Tooltip>
-                                      <Tooltip label="Edit Message" placement="top">
+                                      <Tooltip label="Edit" placement="top">
                                         <IconButton
                                           icon={<FaEdit />}
                                           onClick={() => setEditingMessage({ id: msg.id, content: msg.content })}
-                                          className="text-purple-300 hover:text-purple-400 transition-colors"
+                                          className="text-purple-300 hover:text-purple-400"
                                           size="xs"
                                           aria-label="Edit message"
                                         />
                                       </Tooltip>
-                                      <Tooltip label="React with Heart" placement="top">
+                                      <Tooltip label="Delete" placement="top">
                                         <IconButton
-                                          icon={<FaHeart />}
-                                          onClick={() => reactToMessage(msg.id, '❤️')}
-                                          className="text-red-400 hover:text-red-500 transition-colors"
+                                          icon={<FaTrash />}
+                                          onClick={() => {
+                                            setShowDeleteModal(msg.id);
+                                            onDeleteOpen();
+                                          }}
+                                          className="text-red-400 hover:text-red-500"
                                           size="xs"
-                                          aria-label="React with heart"
+                                          aria-label="Delete message"
                                         />
                                       </Tooltip>
                                     </>
                                   )}
-                                  {(isSender || msg.recipient_username === currentUsername) && (
-                                    <Tooltip label="Delete Message" placement="top">
-                                      <IconButton
-                                        icon={<FaTrash />}
-                                        onClick={() => {
-                                          setShowDeleteModal(msg.id);
-                                          onDeleteOpen();
-                                        }}
-                                        className="text-red-400 hover:text-red-500 transition-colors"
-                                        size="xs"
-                                        aria-label="Delete message"
-                                      />
-                                    </Tooltip>
-                                  )}
+                                  <Tooltip label="Pin" placement="top">
+                                    <IconButton
+                                      icon={<FaStar />}
+                                      onClick={() => pinMessage(msg.id)}
+                                      className={`text-yellow-300 hover:text-yellow-400 ${isPinned ? 'bg-yellow-900/50' : ''}`}
+                                      size="xs"
+                                      aria-label="Pin message"
+                                    />
+                                  </Tooltip>
+                                  <Menu>
+                                    <MenuButton
+                                      as={IconButton}
+                                      icon={<FaHeart />}
+                                      className="text-red-300 hover:text-red-400"
+                                      size="xs"
+                                      aria-label="React"
+                                    />
+                                    <MenuList className="bg-gray-800 text-white">
+                                      {['❤️', '👍', '😂', '😢', '😡'].map(emoji => (
+                                        <MenuItem
+                                          key={emoji}
+                                          onClick={() => reactToMessage(msg.id, emoji)}
+                                          className="hover:bg-gray-700"
+                                        >
+                                          {emoji}
+                                        </MenuItem>
+                                      ))}
+                                    </MenuList>
+                                  </Menu>
                                 </HStack>
-                                {msg.reactions?.length > 0 && (
-                                  <HStack spacing={2}>
-                                    {msg.reactions.map((reaction, i) => (
-                                      <Text key={i} className="text-sm">{reaction}</Text>
+                                {msg.reactions.length > 0 && (
+                                  <HStack className="mt-1">
+                                    {[...new Set(msg.reactions)].map((reaction, i) => (
+                                      <Text key={i} className="text-lg">{reaction}</Text>
                                     ))}
                                   </HStack>
                                 )}
-                                <HStack spacing={3}>
-                                  <Text className="text-xs text-gray-300">
-                                    {formatTimestamp(msg.timestamp)}
-                                  </Text>
-                                  {isSender && (
-                                    <Text className="text-xs text-emerald-400 animate-pulse">
-                                      {msg.is_read ? '✓✓' : '✓'}
-                                    </Text>
-                                  )}
-                                </HStack>
-                              </VStack>
-                            </Box>
-                          </Flex>
-                        </SlideFade>
-                      </React.Fragment>
-                    );
-                  })}
-                  {typingUsers[selectedUser] && (
-                    <HStack className="p-4">
-                      <Avatar name={selectedUser} className="bg-gradient-to-r from-pink-500 to-purple-500 w-10 h-10 ring-2 ring-white/30" />
-                      <Text className="typing-indicator">
-                        {selectedUser} is typing
-                        <span className="typing-dots">
-                          <span style={{ '--i': 1 }}>.</span>
-                          <span style={{ '--i': 2 }}>.</span>
-                          <span style={{ '--i': 3 }}>.</span>
-                        </span>
-                      </Text>
-                    </HStack>
-                  )}
-                  <div ref={messagesEndRef} />
-                </VStack>
-              )}
+                              </MotionBox>
+                            </SlideFade>
+                          </React.Fragment>
+                        );
+                      })}
+                    {queuedMessages.some(q => q.message.recipient_username === selectedUser) && (
+                      <Text className="text-gray-300 text-sm text-center">Messages queued for sending...</Text>
+                    )}
+                    <div ref={messagesEndRef} />
+                  </VStack>
+                )}
+              </AnimatePresence>
             </Box>
             <HStack
-              className={`input-container ${currentTheme.secondary} fixed bottom-0 left-0 right-0 z-60 p-4 shadow-lg border-t border-white/10 ${isMobile ? 'flex-col' : ''}`}
-              style={{ minHeight: '80px', height: isMobile ? 'auto' : '80px' }}
+              className={`input-container ${currentTheme.secondary} fixed bottom-0 left-0 right-0 z-60 p-4 shadow-lg border-t border-white/10`}
+              style={{ minHeight: '80px', height: '80px' }} // Ensure consistent height
+              spacing={3} // Add spacing between elements
             >
               {isRecording ? (
                 <HStack w="full" spacing={4}>
@@ -1738,7 +1735,7 @@ function App() {
                       </PopoverContent>
                     </Popover>
                   </Tooltip>
-                  <textarea
+                  <Input
                     value={messageContent}
                     onChange={(e) => {
                       setMessageContent(e.target.value);
@@ -1754,9 +1751,12 @@ function App() {
                     }}
                     onBlur={stopTyping}
                     placeholder="Type a message..."
-                    className={`flex-1 p-3 rounded-lg ${currentTheme.input} ${currentTheme.text} placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all text-base resize-none max-h-24`}
+                    className={`${currentTheme.input} ${currentTheme.text} placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all text-base resize-none`}
+                    flexGrow={1} // Allow textarea to expand
+                    minHeight="40px"
+                    maxHeight="100px"
+                    resize="vertical"
                     aria-label="Message input"
-                    style={{ minHeight: '40px', maxHeight: '100px' }}
                   />
                   <Tooltip label="Send Message" placement="top">
                     <MotionButton
@@ -1776,53 +1776,108 @@ function App() {
           </>
         ) : (
           <Flex className="flex-1 items-center justify-center text-center p-4">
-            <Text className={`text-gray-300 ${currentTheme.text} text-lg`}>
-              Select a friend to start chatting or search for new friends!
-            </Text>
+            <VStack spacing={6}>
+              <Text className={`text-2xl font-semibold ${currentTheme.text} drop-shadow-lg`}>Welcome to ChitChat!</Text>
+              <Text className={`text-lg ${currentTheme.text} opacity-80`}>Select a friend to start chatting.</Text>
+              <MotionButton
+                onClick={() => setIsSidebarOpen(true)}
+                className={`p-4 ${currentTheme.button} ${currentTheme.text} rounded-lg ${currentTheme.hover} transition-all text-base font-semibold`}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                aria-label="Open sidebar"
+              >
+                Open Friends List
+              </MotionButton>
+            </VStack>
           </Flex>
         )}
       </Box>
 
-      {/* Friend Requests Modal */}
-      <Modal isOpen={isFriendRequestsOpen} onClose={onFriendRequestsClose}>
+      {/* Modals */}
+      <Modal isOpen={isDeleteOpen} onClose={onDeleteClose}>
         <ModalOverlay />
-        <ModalContent className={`bg-gray-800 text-white ${currentTheme.modalHeader}`}>
-          <ModalHeader>Friend Requests ({friendRequestCount})</ModalHeader>
+        <ModalContent className="bg-gray-800 text-white">
+          <ModalHeader>Confirm Delete</ModalHeader>
           <ModalBody>
-            {isLoading ? (
-              <VStack spacing={4}>
-                {[...Array(3)].map((_, i) => (
-                  <Skeleton key={i} height="60px" w="full" borderRadius="xl" />
-                ))}
-              </VStack>
-            ) : friendRequests.length === 0 ? (
-              <Text className="text-gray-400 text-center">No friend requests yet.</Text>
+            Are you sure you want to delete this message? This action cannot be undone.
+          </ModalBody>
+          <ModalFooter>
+            <Button onClick={onDeleteClose} className="mr-4 text-gray-400 hover:text-gray-300">Cancel</Button>
+            <Button
+              onClick={() => {
+                deleteMessage(showDeleteModal);
+              }}
+              className="text-red-400 hover:text-red-500"
+            >
+              Delete
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      <Modal isOpen={isConvDeleteOpen} onClose={onConvDeleteClose}>
+        <ModalOverlay />
+        <ModalContent className="bg-gray-800 text-white">
+          <ModalHeader>Confirm Delete Conversation</ModalHeader>
+          <ModalBody>
+            Are you sure you want to delete the conversation with {showDeleteConversationModal}? This action cannot be undone.
+          </ModalBody>
+          <ModalFooter>
+            <Button onClick={onConvDeleteClose} className="mr-4 text-gray-400 hover:text-gray-300">Cancel</Button>
+            <Button
+              onClick={() => {
+                deleteConversation(showDeleteConversationModal);
+              }}
+              className="text-red-400 hover:text-red-500"
+            >
+              Delete
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      <Modal isOpen={isImageOpen} onClose={onImageClose} isCentered size="xl">
+        <ModalOverlay />
+        <ModalContent className="bg-gray-800">
+          <ModalBody p={0}>
+            <Image src={expandedImage} alt="Expanded image" className="max-w-full max-h-[80vh] object-contain" />
+          </ModalBody>
+        </ModalContent>
+      </Modal>
+
+      <Modal isOpen={isFriendRequestsOpen} onClose={onFriendRequestsClose} isCentered>
+        <ModalOverlay />
+        <ModalContent className="bg-gray-800 text-white max-h-[80vh] overflow-y-auto">
+          <ModalHeader>Friend Requests</ModalHeader>
+          <ModalBody>
+            {friendRequests.length === 0 ? (
+              <Text className="text-gray-300 text-center">No friend requests</Text>
             ) : (
               friendRequests.map(request => (
                 <MotionBox
                   key={request.id}
-                  className="p-4 bg-white/10 rounded-xl mb-4 border border-white/25"
-                  initial={{ opacity: 0, y: 20 }}
+                  className="p-4 bg-white/10 rounded-xl mb-4 glow-effect border border-white/25"
+                  initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                 >
                   <Flex justify="space-between" align="center">
-                    <Text className={`font-medium ${currentTheme.text} text-base`}>
-                      {request.sender_username} wants to connect
-                    </Text>
+                    <Text className={`font-medium ${currentTheme.text}`}>{request.sender_username}</Text>
                     <HStack spacing={2}>
                       <Button
                         onClick={() => respondFriendRequest(request.id, true)}
-                        className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg transition-colors"
-                        aria-label={`Accept friend request from ${request.sender_username}`}
+                        className="text-emerald-400 hover:text-emerald-500"
+                        leftIcon={<FaCheck />}
+                        aria-label="Accept friend request"
                       >
-                        <FaCheck />
+                        Accept
                       </Button>
                       <Button
                         onClick={() => respondFriendRequest(request.id, false)}
-                        className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors"
-                        aria-label={`Reject friend request from ${request.sender_username}`}
+                        className="text-red-400 hover:text-red-500"
+                        leftIcon={<FaTimes />}
+                        aria-label="Reject friend request"
                       >
-                        <FaTimes />
+                        Reject
                       </Button>
                     </HStack>
                   </Flex>
@@ -1831,70 +1886,7 @@ function App() {
             )}
           </ModalBody>
           <ModalFooter>
-            <Button onClick={onFriendRequestsClose} className="text-purple-300 hover:text-purple-400 transition-colors">
-              Close
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-
-      {/* Delete Message Modal */}
-      <Modal isOpen={isDeleteOpen} onClose={onDeleteClose}>
-        <ModalOverlay />
-        <ModalContent className={`bg-gray-800 text-white ${currentTheme.modalHeader}`}>
-          <ModalHeader>Confirm Delete</ModalHeader>
-          <ModalBody>
-            <Text>Are you sure you want to delete this message?</Text>
-          </ModalBody>
-          <ModalFooter>
-            <Button onClick={onDeleteClose} className="text-purple-300 hover:text-purple-400 mr-3 transition-colors">
-              Cancel
-            </Button>
-            <Button
-              onClick={() => deleteMessage(showDeleteModal)}
-              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors"
-              aria-label="Confirm delete message"
-            >
-              Delete
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-
-      {/* Delete Conversation Modal */}
-      <Modal isOpen={isConvDeleteOpen} onClose={onConvDeleteClose}>
-        <ModalOverlay />
-        <ModalContent className={`bg-gray-800 text-white ${currentTheme.modalHeader}`}>
-          <ModalHeader>Confirm Delete Conversation</ModalHeader>
-          <ModalBody>
-            <Text>Are you sure you want to delete the conversation with {showDeleteConversationModal}?</Text>
-          </ModalBody>
-          <ModalFooter>
-            <Button onClick={onConvDeleteClose} className="text-purple-300 hover:text-purple-400 mr-3 transition-colors">
-              Cancel
-            </Button>
-            <Button
-              onClick={() => deleteConversation(showDeleteConversationModal)}
-              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors"
-              aria-label={`Confirm delete conversation with ${showDeleteConversationModal}`}
-            >
-              Delete
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-
-      {/* Image Preview Modal */}
-      <Modal isOpen={isImageOpen} onClose={onImageClose} size="xl">
-        <ModalOverlay />
-        <ModalContent className="bg-gray-800">
-          <ModalBody p={0}>
-            <Image src={expandedImage} alt="Expanded chat image" className="w-full h-auto rounded-lg" />
-          </ModalBody>
-          <ModalFooter>
-            <Button onClick={onImageClose} className="text-purple-300 hover:text-purple-400 transition-colors">
-              Close
-            </Button>
+            <Button onClick={onFriendRequestsClose} className="text-gray-400 hover:text-gray-300">Close</Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
