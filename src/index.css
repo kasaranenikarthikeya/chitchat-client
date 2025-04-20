@@ -49,7 +49,7 @@ html, body, #root {
   flex: 1;
   display: flex;
   flex-direction: column;
-  height: 100dvh;
+  height: 100dvh; /* Ensure full height */
   overflow: hidden;
 }
 
@@ -78,9 +78,11 @@ html, body, #root {
   scroll-behavior: smooth;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
-  padding-top: 64px; /* Adjusted to account for date header */
-  padding-bottom: 80px; /* Reduced padding to ensure input bar visibility */
-  min-height: 0; /* Ensure flex child can shrink */
+  padding-top: 64px; /* Space for header */
+  padding-bottom: 100px; /* Ensure space for input bar */
+  min-height: 0; /* Allow flex child to shrink */
+  display: flex;
+  flex-direction: column;
 }
 
 .chat-container::-webkit-scrollbar {
@@ -97,9 +99,9 @@ html, body, #root {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 80px; /* Consistent height, reduced to avoid overlap */
+  height: 80px; /* Consistent height */
   min-height: 80px;
-  padding: 12px 16px; /* Adjusted padding for better spacing */
+  padding: 12px 16px;
   padding-bottom: env(safe-area-inset-bottom, 16px);
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   background: linear-gradient(to top, rgba(17, 24, 39, 0.95), rgba(17, 24, 39, 0.9));
@@ -108,12 +110,7 @@ html, body, #root {
   display: flex;
   align-items: center;
   transition: transform 0.3s ease, opacity 0.3s ease;
-  visibility: visible; /* Ensure input bar is always visible */
-}
-
-.input-container.hidden {
-  transform: translateY(100%);
-  opacity: 0;
+  visibility: visible; /* Always visible */
 }
 
 .message-bubble {
@@ -157,19 +154,23 @@ html, body, #root {
   100% { transform: translateY(0); opacity: 0.5; }
 }
 
-.date-header {
+.top-date-header {
   position: sticky;
-  top: 64px;
+  top: 64px; /* Below the header */
   z-index: 10;
   background: rgba(0, 0, 0, 0.9);
   backdrop-filter: blur(10px);
   padding: 8px 16px;
   border-radius: 12px;
-  margin: 8px auto;
+  margin: 0 auto;
   width: fit-content;
   font-size: 0.9rem;
   color: #d1d5db;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.date-header {
+  display: none; /* Hide the old inline date header */
 }
 
 .typing-indicator {
@@ -255,7 +256,7 @@ html, body, #root {
   }
   .chat-container {
     padding-top: 64px;
-    padding-bottom: 80px; /* Consistent padding for mobile */
+    padding-bottom: 100px; /* Consistent padding for mobile */
   }
   .input-container {
     height: 80px;
