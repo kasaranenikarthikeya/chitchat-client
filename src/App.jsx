@@ -44,8 +44,8 @@ function App() {
   const [audioBlob, setAudioBlob] = useState(null);
   const [recordingTime, setRecordingTime] = useState(0);
   const [playingAudio, setPlayingAudio] = useState(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Closed by default on mobile
-  const [sidebarWidth, setSidebarWidth] = useState(localStorage.getItem('sidebarWidth') ? parseInt(localStorage.getItem('sidebarWidth'), 10) : 280);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [sidebarWidth, setSidebarWidth] = useState(localStorage.getItem('sidebarWidth') ? parseInt(localStorage.getItem('sidebarWidth'), 10) : 320);
   const [theme, setTheme] = useState('neon');
   const [pinnedMessages, setPinnedMessages] = useState([]);
   const [queuedMessages, setQueuedMessages] = useState([]);
@@ -54,8 +54,6 @@ function App() {
   const socketRef = useRef(null);
   const observerRef = useRef(null);
   const chatContainerRef = useRef(null);
-  const inputContainerRef = useRef(null);
-  const headerContainerRef = useRef(null);
   const fileInputRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
@@ -92,59 +90,8 @@ function App() {
 
   const currentTheme = themes[theme];
 
-  // Dynamic layout adjustment
-  useEffect(() => {
-    const updateLayout = () => {
-      const chatContainer = chatContainerRef.current;
-      const inputContainer = inputContainerRef.current;
-      const headerContainer = headerContainerRef.current;
-      if (chatContainer && inputContainer && headerContainer) {
-        const inputHeight = inputContainer.offsetHeight || 60;
-        const headerHeight = headerContainer.offsetHeight || 70;
-        const safeAreaBottom = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--safe-area-inset-bottom')) || 0;
-        chatContainer.style.height = `calc(100dvh - ${headerHeight + inputHeight + safeAreaBottom}px)`;
-        chatContainer.style.paddingTop = `${headerHeight}px`;
-        chatContainer.style.paddingBottom = `calc(${inputHeight}px + ${safeAreaBottom}px + 10px)`;
-        // Force scroll to bottom
-        setTimeout(() => {
-          if (inputContainer) {
-            inputContainer.scrollIntoView({ behavior: 'smooth', block: 'end' });
-            window.scrollTo(0, document.body.scrollHeight);
-          }
-        }, 100);
-      }
-    };
-
-    // Debounced resize handler
-    const debouncedUpdateLayout = debounce(updateLayout, 100);
-    updateLayout(); // Initial layout
-
-    window.addEventListener('resize', debouncedUpdateLayout);
-    window.addEventListener('orientationchange', () => {
-      setTimeout(debouncedUpdateLayout, 200); // Delay for orientation stabilization
-    });
-
-    // Handle virtual keyboard
-    const handleKeyboard = () => {
-      setTimeout(() => {
-        const inputContainer = inputContainerRef.current;
-        if (inputContainer) {
-          inputContainer.scrollIntoView({ behavior: 'smooth', block: 'end' });
-          window.scrollTo(0, document.body.scrollHeight);
-        }
-      }, 400); // Increased delay for keyboard
-    };
-
-    window.addEventListener('resize', handleKeyboard);
-    return () => {
-      window.removeEventListener('resize', debouncedUpdateLayout);
-      window.removeEventListener('orientationchange', debouncedUpdateLayout);
-      window.removeEventListener('resize', handleKeyboard);
-    };
-  }, []);
-
   const scrollToBottom = useCallback(() => {
-    if (messagesEndRef.current) {
+    if (messagesEndRef.current && chatContainerRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }
   }, []);
@@ -341,7 +288,7 @@ function App() {
         return;
       }
 
-      const ws = new WebSocket(`${wsUrl}?token=${token}`);
+      const ws = new WebSocket(`wss://chitchat-server-emw5.onrender.com/ws?token=${token}`);
       socketRef.current = ws;
 
       ws.onopen = () => {
@@ -521,7 +468,7 @@ function App() {
 
   useEffect(() => {
     if (selectedUser && conversations.length) {
-      scrollToBottom();
+      setTimeout(scrollToBottom, 100); // Delay to ensure DOM is updated
       setIsSidebarOpen(false);
     }
   }, [selectedUser, conversations, scrollToBottom]);
@@ -781,7 +728,6 @@ function App() {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       if (!res.ok) throw new Error((await res.json()).detail || 'Failed to delete message');
-      handleMessageDelete(messageId);
       toast({ title: 'Message Deleted', status: 'success', duration: 2000, isClosable: true });
     } catch (e) {
       console.error('Delete message error:', e);
@@ -880,7 +826,7 @@ function App() {
   const selectConversation = useCallback((username) => {
     setSelectedUser(username);
     setIsSidebarOpen(false);
-    scrollToBottom();
+    setTimeout(scrollToBottom, 100); // Ensure scroll after render
   }, [scrollToBottom]);
 
   const handleEmojiClick = (emojiObject) => {
@@ -1004,7 +950,7 @@ function App() {
           @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
           html, body, #root {
-            height: 100dvh;
+            height: 100vh;
             width: 100vw;
             overflow: hidden;
             margin: 0;
@@ -1013,42 +959,6 @@ function App() {
           }
           * {
             box-sizing: border-box;
-          }
-          .header-container {
-            position: sticky;
-            top: 0;
-            z-index: 1500;
-            padding: 12px 16px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            background: rgba(255, 255, 255, 0.12);
-            backdrop-filter: blur(15px);
-          }
-          .chat-container {
-            flex: 1;
-            overflow-y: auto;
-            padding: 24px;
-            scrollbar-width: thin;
-            scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
-          }
-          .chat-container::-webkit-scrollbar {
-            width: 6px;
-          }
-          .chat-container::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 3px;
-          }
-          .input-container {
-            position: fixed;
-            bottom: env(safe-area-inset-bottom, 0);
-            left: 0;
-            right: 0;
-            padding: 12px 16px;
-            z-index: 2000;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            background: rgba(255, 255, 255, 0.12);
-            backdrop-filter: blur(15px);
-            border-radius: 20px 20px 0 0;
-            box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.2);
           }
           .typing-dots span {
             animation: typing 1s infinite;
@@ -1082,10 +992,24 @@ function App() {
             50% { opacity: 1; }
             100% { opacity: 0.6; }
           }
+          .chat-container {
+            scroll-behavior: smooth;
+            overflow-x: hidden;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+          }
+          .chat-container::-webkit-scrollbar {
+            width: 6px;
+          }
+          .chat-container::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+          }
           .sidebar-container {
             overflow-y: auto;
             overflow-x: hidden;
-            height: 100dvh;
+            height: 100vh;
             scrollbar-width: thin;
             scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
           }
@@ -1156,7 +1080,7 @@ function App() {
           }
           .date-header {
             position: sticky;
-            top: 70px; /* Below header */
+            top: 0;
             z-index: 10;
             background: rgba(0, 0, 0, 0.9);
             backdrop-filter: blur(10px);
@@ -1175,6 +1099,13 @@ function App() {
           .profile-card:hover {
             transform: translateY(-3px);
             box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+          }
+          .input-container {
+            border-radius: 30px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.25);
           }
           .new-message {
             animation: slideIn 0.4s ease;
@@ -1218,7 +1149,7 @@ function App() {
               position: fixed;
               top: 0;
               left: 0;
-              height: 100dvh;
+              height: 100vh;
               width: 280px;
               z-index: 1000;
               transform: translateX(-280px);
@@ -1229,6 +1160,15 @@ function App() {
             }
             .sidebar-content {
               padding-top: 16px;
+            }
+            .sidebar-mobile-nav {
+              display: none;
+            }
+            .chat-container {
+              height: calc(100vh - 130px);
+            }
+            .input-container {
+              padding: 12px;
             }
             .message-bubble {
               max-width: 80%;
@@ -1241,17 +1181,16 @@ function App() {
               padding: 12px;
             }
             .date-header {
-              top: 60px;
               font-size: 0.8rem;
               padding: 6px 12px;
-            }
-            .header-container {
-              padding: 10px 12px;
             }
           }
           @media (min-width: 641px) {
             .sidebar-container {
               transform: translateX(0) !important;
+            }
+            .sidebar-mobile-nav {
+              display: none;
             }
           }
         `}
@@ -1363,7 +1302,7 @@ function App() {
                   {[...Array(3)].map((_, i) => (
                     <Skeleton key={i} height="60px" w="full" borderRadius="xl" />
                   ))}
-              </VStack>
+                </VStack>
               ) : isLoading && !isInitialLoad ? (
                 <Text className="text-gray-300 text-sm text-center">Loading chats...</Text>
               ) : (
@@ -1435,6 +1374,7 @@ function App() {
                   />
                   <MenuList className="bg-gray-800 text-white">
                     <MenuItem onClick={() => setTheme('neon')} className="hover:bg-gray-700">Neon</MenuItem>
+                    {/* Add more themes here in the future */}
                   </MenuList>
                 </Menu>
               </Tooltip>
@@ -1489,32 +1429,22 @@ function App() {
         {selectedUser ? (
           <>
             <Flex
-              ref={headerContainerRef}
               className={`header-container ${currentTheme.secondary}`}
+explorer
               justify="space-between"
               align="center"
-              px={4}
-              py={3}
-              zIndex={1500}
             >
-              <HStack spacing={3}>
-                <Tooltip label="Back to Conversations" placement="right">
-                  <IconButton
-                    icon={<FaChevronLeft />}
-                    onClick={() => {
-                      setSelectedUser(null);
-                      setIsSidebarOpen(true);
-                    }}
-                    className="text-purple-300 hover:text-purple-400 transition-colors"
-                    aria-label="Back to conversations"
-                    size="sm"
-                  />
-                </Tooltip>
-                <Avatar name={selectedUser} className="bg-gradient-to-r from-pink-500 to-purple-500 w-10 h-10 ring-2 ring-white/30" />
+              <HStack spacing={4}>
+                <IconButton
+                  icon={<FaBars />}
+                  onClick={() => setIsSidebarOpen(true)}
+                  className="text-purple-300 hover:text-purple-400 transition-colors"
+                  aria-label="Open sidebar"
+                  size="sm"
+                />
+                <Avatar name={selectedUser} className="bg-gradient-to-r from-pink-500 to-purple-500 w-12 h-12 ring-2 ring-white/30" />
                 <VStack align="start" spacing={1}>
-                  <Text className={`font-semibold ${currentTheme.text} text-lg truncate`} maxW="200px">
-                    {selectedUser}
-                  </Text>
+                  <Text className={`font-semibold ${currentTheme.text} text-lg`}>{selectedUser}</Text>
                   <Text className={`text-sm ${onlineUsers[selectedUser] ? 'text-emerald-300' : 'text-gray-400'}`}>
                     {onlineUsers[selectedUser] ? 'Online' : lastSeen[selectedUser] ? `Last seen ${formatLastSeen(lastSeen[selectedUser])}` : 'Offline'}
                   </Text>
@@ -1615,7 +1545,7 @@ function App() {
                                           icon={<FaStar />}
                                           onClick={() => pinMessage(msg.id)}
                                           className="text-yellow-400 hover:text-yellow-500 transition-colors"
-                                          size="xs"
+                                          size="sm"
                                           aria-label={isPinned ? 'Unpin message' : 'Pin message'}
                                         />
                                       </Tooltip>
@@ -1624,53 +1554,69 @@ function App() {
                                           icon={<FaEdit />}
                                           onClick={() => setEditingMessage({ id: msg.id, content: msg.content })}
                                           className="text-purple-300 hover:text-purple-400 transition-colors"
-                                          size="xs"
+                                          size="sm"
                                           aria-label="Edit message"
-                                        />
-                                      </Tooltip>
-                                      <Tooltip label="React with Heart" placement="top">
-                                        <IconButton
-                                          icon={<FaHeart />}
-                                          onClick={() => reactToMessage(msg.id, '❤️')}
-                                          className="text-red-400 hover:text-red-500 transition-colors"
-                                          size="xs"
-                                          aria-label="React with heart"
                                         />
                                       </Tooltip>
                                     </>
                                   )}
-                                  {(isSender || msg.recipient_username === currentUsername) && (
-                                    <Tooltip label="Delete Message" placement="top">
+                                  <Tooltip label="Delete Message" placement="top">
+                                    <IconButton
+                                      icon={<FaTrash />}
+                                      onClick={() => {
+                                        setShowDeleteModal(msg.id);
+                                        onDeleteOpen();
+                                      }}
+                                      className="text-red-400 hover:text-red-500 transition-colors"
+                                      size="sm"
+                                      aria-label="Delete message"
+                                    />
+                                  </Tooltip>
+                                  <Popover>
+                                    <PopoverTrigger>
                                       <IconButton
-                                        icon={<FaTrash />}
-                                        onClick={() => {
-                                          setShowDeleteModal(msg.id);
-                                          onDeleteOpen();
-                                        }}
-                                        className="text-red-400 hover:text-red-500 transition-colors"
-                                        size="xs"
-                                        aria-label="Delete message"
+                                        icon={<FaSmile />}
+                                        className="text-purple-300 hover:text-purple-400 transition-colors"
+                                        size="sm"
+                                        aria-label="React to message"
                                       />
-                                    </Tooltip>
-                                  )}
+                                    </PopoverTrigger>
+                                    <PopoverContent className="bg-gray-800 border-none">
+                                      <PopoverBody className="p-2">
+                                        <HStack spacing={2}>
+                                          {['😊', '❤️', '😂', '👍'].map(emoji => (
+                                            <Button
+                                              key={emoji}
+                                              onClick={() => reactToMessage(msg.id, emoji)}
+                                              className="text-2xl p-2 hover:bg-gray-700 rounded-full"
+                                              variant="ghost"
+                                              aria-label={`React with ${emoji}`}
+                                            >
+                                              {emoji}
+                                            </Button>
+                                          ))}
+                                        </HStack>
+                                      </PopoverBody>
+                                    </PopoverContent>
+                                  </Popover>
                                 </HStack>
-                                {msg.reactions?.length > 0 && (
-                                  <HStack spacing={2}>
-                                    {msg.reactions.map((reaction, i) => (
-                                      <Text key={i} className="text-sm">{reaction}</Text>
+                                {msg.reactions && msg.reactions.length > 0 && (
+                                  <HStack spacing={2} mt={2}>
+                                    {msg.reactions.map((reaction, idx) => (
+                                      <Text key={idx} className="text-sm text-gray-300">
+                                        {reaction.emoji} {reaction.count}
+                                      </Text>
                                     ))}
                                   </HStack>
                                 )}
-                                <HStack spacing={3}>
-                                  <Text className="text-xs text-gray-300">
-                                    {formatTimestamp(msg.timestamp)}
-                                  </Text>
+                                <Text className={`text-xs ${currentTheme.text} opacity-70 mt-1`}>
+                                  {formatTimestamp(msg.timestamp)}
                                   {isSender && (
-                                    <Text className="text-xs text-emerald-400 animate-pulse">
-                                      {msg.is_read ? '✓✓' : '✓'}
-                                    </Text>
+                                    <span className="ml-2">
+                                      {msg.is_read ? <FaCheck className="inline text-green-400" /> : <FaCheck className="inline text-gray-400" />}
+                                    </span>
                                   )}
-                                </HStack>
+                                </Text>
                               </VStack>
                             </Box>
                           </Flex>
@@ -1678,40 +1624,29 @@ function App() {
                       </React.Fragment>
                     );
                   })}
-                  {typingUsers[selectedUser] && (
-                    <Text className="typing-indicator">
-                      Typing <span className="typing-dots">
-                        <span style={{ '--i': 1 }}>.</span>
-                        <span style={{ '--i': 2 }}>.</span>
-                        <span style={{ '--i': 3 }}>.</span>
-                      </span>
-                    </Text>
-                  )}
                   <div ref={messagesEndRef} />
                 </VStack>
               )}
+              {typingUsers[selectedUser] && (
+                <Flex justify="flex-start" p={4}>
+                  <Text className="typing-indicator">
+                    {selectedUser} is typing
+                    <span className="typing-dots">
+                      <span style={{ '--i': 1 }}>.</span>
+                      <span style={{ '--i': 2 }}>.</span>
+                      <span style={{ '--i': 3 }}>.</span>
+                    </span>
+                  </Text>
+                </Flex>
+              )}
             </Box>
-            <HStack ref={inputContainerRef} className={`input-container ${currentTheme.secondary}`} spacing={2}>
-              {isRecording ? (
-                <HStack w="full" spacing={4}>
-                  <Text className="text-red-400 font-semibold text-sm">{formatTime(recordingTime)}</Text>
-                  <Box className="recording-progress flex-1" />
-                  <Button
-                    onClick={stopRecording}
-                    className="text-red-400 hover:text-red-500 transition-colors text-sm font-medium"
-                    aria-label="Stop recording"
-                    size="sm"
-                  >
-                    Stop
-                  </Button>
-                </HStack>
-              ) : audioBlob ? (
-                <HStack w="full" spacing={4}>
+            <Box className="input-container">
+              {audioBlob && !isRecording && (
+                <HStack spacing={3} mb={3}>
                   <Button
                     onClick={sendAudioMessage}
                     className="text-purple-300 hover:text-purple-400 transition-colors text-sm font-medium"
                     aria-label="Send audio message"
-                    size="sm"
                   >
                     Send Audio
                   </Button>
@@ -1719,152 +1654,113 @@ function App() {
                     onClick={() => setAudioBlob(null)}
                     className="text-red-400 hover:text-red-500 transition-colors text-sm font-medium"
                     aria-label="Discard audio"
-                    size="sm"
                   >
                     Discard
                   </Button>
                 </HStack>
-              ) : (
-                <>
-                  <Tooltip label="Attach Image" placement="top">
-                    <IconButton
-                      icon={<FaPaperclip />}
-                      onClick={() => fileInputRef.current.click()}
-                      className="text-purple-300 hover:text-purple-400 transition-colors"
-                      aria-label="Attach image"
-                      size="sm"
-                    />
-                  </Tooltip>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    ref={fileInputRef}
-                    style={{ display: 'none' }}
-                    onChange={handleImageUpload}
-                  />
-                  <Tooltip label={isRecording ? 'Stop Recording' : 'Record Audio'} placement="top">
-                    <IconButton
-                      icon={<FaMicrophone />}
-                      onClick={isRecording ? stopRecording : startRecording}
-                      className={`${isRecording ? 'text-red-400' : 'text-purple-300'} hover:${isRecording ? 'text-red-500' : 'text-purple-400'} transition-colors`}
-                      aria-label={isRecording ? 'Stop recording' : 'Record audio'}
-                      size="sm"
-                    />
-                  </Tooltip>
-                  <Popover placement="top-start">
-                    <PopoverTrigger>
-                      <IconButton
-                        icon={<FaSmile />}
-                        className="text-purple-300 hover:text-purple-400 transition-colors"
-                        aria-label="Open emoji picker"
-                        size="sm"
-                      />
-                    </PopoverTrigger>
-                    <PopoverContent className="bg-gray-800 border border-white/25">
-                      <PopoverBody>
-                        <EmojiPicker onEmojiClick={handleEmojiClick} />
-                      </PopoverBody>
-                    </PopoverContent>
-                  </Popover>
-                  <Input
-                    value={messageContent}
-                    onChange={(e) => {
-                      setMessageContent(e.target.value);
-                      debouncedTyping();
-                    }}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        sendMessage();
-                      }
-                    }}
-                    onBlur={stopTyping}
-                    placeholder="Type a message..."
-                    className={`flex-1 p-4 rounded-lg ${currentTheme.input} ${currentTheme.text} placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all text-base`}
-                    aria-label="Message input"
-                    onFocus={() => {
-                      setTimeout(() => {
-                        const inputContainer = inputContainerRef.current;
-                        if (inputContainer) {
-                          inputContainer.scrollIntoView({ behavior: 'smooth', block: 'end' });
-                          window.scrollTo(0, document.body.scrollHeight);
-                        }
-                      }, 400); // Delay to account for keyboard appearance
-                    }}
-                  />
-                  <Tooltip label="Send Message" placement="top">
-                    <IconButton
-                      icon={<FaArrowUp />}
-                      onClick={() => sendMessage()}
-                      isDisabled={!messageContent.trim()}
-                      className={`${
-                        messageContent.trim()
-                          ? 'text-purple-300 hover:text-purple-400'
-                          : 'text-gray-500 cursor-not-allowed'
-                      } transition-colors`}
-                      aria-label="Send message"
-                      size="sm"
-                    />
-                  </Tooltip>
-                </>
               )}
-            </HStack>
+              <HStack spacing={3}>
+                <input
+                  type="file"
+                  accept="image/*"
+                  ref={fileInputRef}
+                  style={{ display: 'none' }}
+                  onChange={handleImageUpload}
+                />
+                <Tooltip label="Attach Image" placement="top">
+                  <IconButton
+                    icon={<FaPaperclip />}
+                    onClick={() => fileInputRef.current.click()}
+                    className="text-purple-300 hover:text-purple-400 transition-colors"
+                    aria-label="Attach image"
+                    size="sm"
+                  />
+                </Tooltip>
+                <Tooltip label={isRecording ? 'Stop Recording' : 'Record Audio'} placement="top">
+                  <IconButton
+                    icon={<FaMicrophone />}
+                    onClick={isRecording ? stopRecording : startRecording}
+                    className={`${isRecording ? 'text-red-400' : 'text-purple-300'} hover:text-${isRecording ? 'red-500' : 'purple-400'} transition-colors`}
+                    aria-label={isRecording ? 'Stop recording' : 'Record audio'}
+                    size="sm"
+                  />
+                </Tooltip>
+                {isRecording && (
+                  <Text className="text-sm text-purple-300">
+                    Recording: {formatTime(recordingTime)}
+                  </Text>
+                )}
+                <Popover>
+                  <PopoverTrigger>
+                    <IconButton
+                      icon={<FaSmile />}
+                      className="text-purple-300 hover:text-purple-400 transition-colors"
+                      aria-label="Open emoji picker"
+                      size="sm"
+                    />
+                  </PopoverTrigger>
+                  <PopoverContent>
+                    <PopoverBody>
+                      <EmojiPicker onEmojiClick={handleEmojiClick} />
+                    </PopoverBody>
+                  </PopoverContent>
+                </Popover>
+                <Input
+                  value={messageContent}
+                  onChange={(e) => {
+                    setMessageContent(e.target.value);
+                    debouncedTyping();
+                  }}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      sendMessage();
+                    }
+                  }}
+                  placeholder="Type a message..."
+                  className={`flex-1 p-4 rounded-lg ${currentTheme.input} ${currentTheme.text} placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all text-base`}
+                  aria-label="Message input"
+                />
+                <Tooltip label="Send Message" placement="top">
+                  <IconButton
+                    icon={<FaArrowUp />}
+                    onClick={() => sendMessage()}
+                    className="text-purple-300 hover:text-purple-400 transition-colors"
+                    aria-label="Send message"
+                    size="sm"
+                    isDisabled={!messageContent.trim()}
+                  />
+                </Tooltip>
+              </HStack>
+            </Box>
           </>
         ) : (
-          <Flex
-            ref={headerContainerRef}
-            className={`header-container ${currentTheme.secondary}`}
-            justify="space-between"
-            align="center"
-            px={4}
-            py={3}
-            zIndex={1500}
-          >
-            <HStack spacing={3}>
-              <Tooltip label="Open Sidebar" placement="right">
-                <IconButton
-                  icon={<FaBars />}
-                  onClick={() => setIsSidebarOpen(true)}
-                  className="text-purple-300 hover:text-purple-400 transition-colors"
-                  aria-label="Open sidebar"
-                  size="sm"
-                />
-              </Tooltip>
-              <Text className={`font-semibold ${currentTheme.text} text-lg`}>
-                Select a conversation
-              </Text>
-            </HStack>
-            <HStack spacing={3}>
-              <Tooltip label="View Friend Requests" placement="left">
-                <Button
-                  onClick={onFriendRequestsOpen}
-                  className="text-purple-300 hover:text-purple-400 transition-colors text-sm font-medium"
-                  aria-label="View friend requests"
-                >
-                  Friend Requests {friendRequestCount > 0 && `(${friendRequestCount})`}
-                </Button>
-              </Tooltip>
-            </HStack>
+          <Flex flex={1} justify="center" align="center" flexDir="column" className={currentTheme.secondary}>
+            <IconButton
+              icon={<FaBars />}
+              onClick={() => setIsSidebarOpen(true)}
+              className="text-purple-300 hover:text-purple-400 transition-colors absolute top-4 left-4"
+              aria-label="Open sidebar"
+              size="lg"
+            />
+            <Text className={`text-2xl ${currentTheme.text} font-semibold`}>Select a chat to start messaging</Text>
+            <Text className={`text-lg ${currentTheme.text} opacity-70 mt-2`}>Connect with friends in real-time</Text>
           </Flex>
         )}
       </Box>
-
-      {/* Delete Message Modal */}
-      <Modal isOpen={isDeleteOpen} onClose={onDeleteClose} size="sm">
+      <Modal isOpen={isDeleteOpen} onClose={onDeleteClose} isCentered>
         <ModalOverlay />
         <ModalContent className="modal-content bg-gray-800 text-white">
           <ModalHeader className={`modal-header ${currentTheme.modalHeader}`}>
             Delete Message
           </ModalHeader>
           <ModalBody className="modal-body">
-            <Text className="text-base">
-              Are you sure you want to delete this message? This action cannot be undone.
-            </Text>
+            Are you sure you want to delete this message? This action cannot be undone.
           </ModalBody>
           <ModalFooter className="modal-footer">
             <Button
               onClick={onDeleteClose}
-              className="text-purple-300 hover:text-purple-400 transition-colors mr-3"
+              className="text-purple-300 hover:text-purple-400 transition-colors mr-4"
               aria-label="Cancel delete"
             >
               Cancel
@@ -1879,23 +1775,19 @@ function App() {
           </ModalFooter>
         </ModalContent>
       </Modal>
-
-      {/* Delete Conversation Modal */}
-      <Modal isOpen={!!showDeleteConversationModal} onClose={onConvDeleteClose} size="sm">
+      <Modal isOpen={isConvDeleteOpen} onClose={onConvDeleteClose} isCentered>
         <ModalOverlay />
         <ModalContent className="modal-content bg-gray-800 text-white">
           <ModalHeader className={`modal-header ${currentTheme.modalHeader}`}>
             Delete Conversation
           </ModalHeader>
           <ModalBody className="modal-body">
-            <Text className="text-base">
-              Are you sure you want to delete the conversation with {showDeleteConversationModal}? This action cannot be undone.
-            </Text>
+            Are you sure you want to delete the conversation with {showDeleteConversationModal}? This action cannot be undone.
           </ModalBody>
           <ModalFooter className="modal-footer">
             <Button
               onClick={onConvDeleteClose}
-              className="text-purple-300 hover:text-purple-400 transition-colors mr-3"
+              className="text-purple-300 hover:text-purple-400 transition-colors mr-4"
               aria-label="Cancel delete conversation"
             >
               Cancel
@@ -1910,38 +1802,48 @@ function App() {
           </ModalFooter>
         </ModalContent>
       </Modal>
-
-      {/* Friend Requests Modal */}
-      <Modal isOpen={isFriendRequestsOpen} onClose={onFriendRequestsClose} size="md">
+      <Modal isOpen={isImageOpen} onClose={onImageClose} size="xl" isCentered>
+        <ModalOverlay />
+        <ModalContent className="bg-transparent">
+          <ModalBody className="p-0">
+            <Image src={expandedImage} alt="Expanded chat image" className="w-full rounded-lg shadow-2xl" />
+          </ModalBody>
+          <ModalFooter className="justify-center">
+            <Button
+              onClick={onImageClose}
+              className="text-purple-300 hover:text-purple-400 transition-colors"
+              aria-label="Close image"
+            >
+              Close
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+      <Modal isOpen={isFriendRequestsOpen} onClose={onFriendRequestsClose} size="md" isCentered>
         <ModalOverlay />
         <ModalContent className="modal-content bg-gray-800 text-white">
           <ModalHeader className={`modal-header ${currentTheme.modalHeader}`}>
             Friend Requests
           </ModalHeader>
           <ModalBody className="modal-body">
-            {friendRequests.length === 0 ? (
-              <Text className="text-gray-300 text-center text-base">
-                No friend requests at the moment.
-              </Text>
-            ) : (
+            {friendRequests.length > 0 ? (
               <VStack spacing={4}>
-                {friendRequests.map(req => (
-                  <MotionBox
-                    key={req.id}
-                    className="p-4 bg-white/10 rounded-xl w-full friend-request-item border border-white/25"
-                    whileHover={{ scale: 1.02 }}
-                  >
-                    <Flex justify="space-between" align="center">
-                      <Text className={`font-medium ${currentTheme.text} text-base`}>
-                        {req.sender_username}
-                      </Text>
-                      {req.status === 'pending' && req.recipient_username === currentUsername && (
+                {friendRequests
+                  .filter(req => req.status === 'pending' && req.recipient_username === currentUsername)
+                  .map(req => (
+                    <MotionBox
+                      key={req.id}
+                      className="p-4 bg-white/10 rounded-xl w-full friend-request-item border border-white/25"
+                      whileHover={{ scale: 1.02 }}
+                    >
+                      <Flex justify="space-between" align="center">
+                        <Text className={`font-medium ${currentTheme.text} text-base`}>{req.sender_username}</Text>
                         <HStack spacing={3}>
                           <Tooltip label="Accept Friend Request" placement="top">
                             <IconButton
                               icon={<FaCheck />}
                               onClick={() => respondFriendRequest(req.id, true)}
-                              className="text-emerald-400 hover:text-emerald-500 transition-colors"
+                              className="text-green-400 hover:text-green-500 transition-colors"
                               aria-label={`Accept friend request from ${req.sender_username}`}
                               size="sm"
                             />
@@ -1956,11 +1858,12 @@ function App() {
                             />
                           </Tooltip>
                         </HStack>
-                      )}
-                    </Flex>
-                  </MotionBox>
-                ))}
+                      </Flex>
+                    </MotionBox>
+                  ))}
               </VStack>
+            ) : (
+              <Text className="text-gray-300 text-center">No pending friend requests</Text>
             )}
           </ModalBody>
           <ModalFooter className="modal-footer">
@@ -1968,29 +1871,6 @@ function App() {
               onClick={onFriendRequestsClose}
               className="text-purple-300 hover:text-purple-400 transition-colors"
               aria-label="Close friend requests"
-            >
-              Close
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-
-      {/* Expanded Image Modal */}
-      <Modal isOpen={isImageOpen} onClose={onImageClose} size="xl">
-        <ModalOverlay />
-        <ModalContent className="modal-content bg-gray-800">
-          <ModalBody className="modal-body p-0">
-            <Image
-              src={expandedImage}
-              alt="Expanded chat image"
-              className="w-full h-auto rounded-lg"
-            />
-          </ModalBody>
-          <ModalFooter className="modal-footer">
-            <Button
-              onClick={onImageClose}
-              className="text-purple-300 hover:text-purple-400 transition-colors"
-              aria-label="Close image"
             >
               Close
             </Button>
