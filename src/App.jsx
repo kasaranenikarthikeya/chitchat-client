@@ -90,11 +90,11 @@ function App() {
 
   const currentTheme = themes[theme];
 
-  const scrollToBottom = useCallback(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    }
-  }, []);
+  // const scrollToBottom = useCallback(() => {
+  //   if (messagesEndRef.current) {
+  //     messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  //   }
+  // }, []);
 
   const fetchFriendRequests = useCallback(async () => {
     if (!token) return;
