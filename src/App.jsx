@@ -470,7 +470,7 @@ function App() {
   useEffect(() => {
     if (selectedUser && conversations.length) {
       scrollToBottom();
-      setIsSidebarOpen(false); // Close sidebar when a user is selected
+      setIsSidebarOpen(false);
     }
   }, [selectedUser, conversations, scrollToBottom]);
 
@@ -825,8 +825,13 @@ function App() {
   };
 
   const selectConversation = useCallback((username) => {
-    setSelectedUser(username);
-    setIsSidebarOpen(false); // Close sidebar when selecting a conversation
+    setSelectedUser(prev => {
+      if (prev !== username) {
+        setMessageContent(''); // Reset input when switching users
+      }
+      return username;
+    });
+    setIsSidebarOpen(false);
     scrollToBottom();
   }, [scrollToBottom]);
 
@@ -879,17 +884,16 @@ function App() {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  // Dynamic header adjustment for address bar
   const adjustHeaderPadding = useCallback(() => {
     if (headerRef.current) {
       const topInset = Math.max(window.innerHeight - document.documentElement.clientHeight, 0);
-      headerRef.current.style.paddingTop = `${topInset + 80}px`; // Increased base padding to 80px for better visibility
+      headerRef.current.style.paddingTop = `${topInset + 20}px`;
     }
   }, []);
 
   useEffect(() => {
     const debouncedAdjust = debounce(adjustHeaderPadding, 100);
-    adjustHeaderPadding(); // Initial adjustment
+    adjustHeaderPadding();
     window.addEventListener('resize', debouncedAdjust);
     window.addEventListener('scroll', debouncedAdjust);
     return () => {
@@ -1196,14 +1200,15 @@ function App() {
       </MotionBox>
       <Box className={`flex-1 flex flex-col ${currentTheme.secondary} overflow-hidden`}>
         {selectedUser ? (
-          <>
+          <MotionBox
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
             <Flex
               ref={headerRef}
-              className={`header-container ${currentTheme.secondary} fixed top-0 left-0 right-0 z-50 min-h-[100px] p-6 justify-between items-center shadow-lg border-b border-white/10`}
-              style={{ paddingTop: '80px' }} // Increased padding for full visibility
-              initial={{ y: -100 }}
-              animate={{ y: 0 }}
-              transition={{ duration: 0.3, ease: 'easeOut' }}
+              className={`header-container ${currentTheme.secondary} sticky top-0 left-0 right-0 z-50 min-h-[64px] p-4 justify-between items-center shadow-lg border-b border-white/10`}
             >
               <HStack spacing={4}>
                 <Tooltip label="Back to Conversations" placement="right">
@@ -1241,8 +1246,7 @@ function App() {
             </Flex>
             <Box
               ref={chatContainerRef}
-              className="chat-container pt-[100px] pb-20 flex-1 overflow-y-auto"
-              style={{ paddingBottom: '80px' }} // Ensure space for input bar
+              className="chat-container pt-[64px] pb-20 flex-1 overflow-y-auto"
             >
               {isInitialLoad ? (
                 <VStack spacing={4} p={4}>
@@ -1408,9 +1412,12 @@ function App() {
                 </VStack>
               )}
             </Box>
-            <HStack
-              className={`input-container ${currentTheme.secondary} fixed bottom-0 left-0 right-0 z-60 p-4 shadow-lg border-t border-white/10`}
-              style={{ minHeight: '80px' }} // Fixed height to prevent collapse
+            <MotionBox
+              className={`input-container ${currentTheme.secondary} ${!selectedUser ? 'hidden' : ''}`}
+              initial={{ opacity: 0, y: 100 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 100 }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
             >
               {isRecording ? (
                 <HStack w="full" spacing={4}>
@@ -1513,139 +1520,102 @@ function App() {
                   </Tooltip>
                 </>
               )}
-            </HStack>
-          </>
+            </MotionBox>
+          </MotionBox>
         ) : (
           <Flex className="flex-1 items-center justify-center">
-            <Text className="text-gray-300 text-xl font-medium">Select a friend to start chatting!</Text>
+            <Text className="text-gray-300 text-xl font-medium">Select a friend to start chatting
+            </Text>
           </Flex>
         )}
       </Box>
-      <Modal isOpen={isDeleteOpen} onClose={onDeleteClose} size="sm">
+
+      <Modal isOpen={isDeleteOpen} onClose={onDeleteClose}>
         <ModalOverlay />
-        <ModalContent className="modal-content">
-          <ModalHeader className={`modal-header ${currentTheme.modalHeader}`}>Delete Message</ModalHeader>
-          <ModalBody className="modal-body">
-            <Text className={`${currentTheme.text} text-base`}>Are you sure you want to delete this message?</Text>
+        <ModalContent className={`${currentTheme.modalHeader} ${currentTheme.secondary}`}>
+          <ModalHeader>Confirm Delete</ModalHeader>
+          <ModalBody>
+            Are you sure you want to delete this message? This action cannot be undone.
           </ModalBody>
-          <ModalFooter className="modal-footer">
-            <Button
-              onClick={onDeleteClose}
-              className="text-purple-300 hover:text-purple-400 transition-colors mr-3 text-sm font-medium"
-              aria-label="Cancel delete"
-            >
+          <ModalFooter>
+            <Button onClick={onDeleteClose} className="mr-4 text-gray-400 hover:text-gray-300 transition-colors">
               Cancel
             </Button>
             <Button
               onClick={() => deleteMessage(showDeleteModal)}
-              className="bg-red-500 hover:bg-red-600 text-white transition-colors text-sm font-medium"
-              aria-label="Confirm delete"
+              className="bg-red-500 hover:bg-red-600 text-white transition-colors"
             >
               Delete
             </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
-      <Modal isOpen={isConvDeleteOpen} onClose={onConvDeleteClose} size="sm">
+
+      <Modal isOpen={isConvDeleteOpen} onClose={onConvDeleteClose}>
         <ModalOverlay />
-        <ModalContent className="modal-content">
-          <ModalHeader className={`modal-header ${currentTheme.modalHeader}`}>Delete Conversation</ModalHeader>
-          <ModalBody className="modal-body">
-            <Text className={`${currentTheme.text} text-base`}>Are you sure you want to delete this conversation?</Text>
+        <ModalContent className={`${currentTheme.modalHeader} ${currentTheme.secondary}`}>
+          <ModalHeader>Confirm Delete Conversation</ModalHeader>
+          <ModalBody>
+            Are you sure you want to delete the conversation with {showDeleteConversationModal}? This action cannot be undone.
           </ModalBody>
-          <ModalFooter className="modal-footer">
-            <Button
-              onClick={onConvDeleteClose}
-              className="text-purple-300 hover:text-purple-400 transition-colors mr-3 text-sm font-medium"
-              aria-label="Cancel delete conversation"
-            >
+          <ModalFooter>
+            <Button onClick={onConvDeleteClose} className="mr-4 text-gray-400 hover:text-gray-300 transition-colors">
               Cancel
             </Button>
             <Button
               onClick={() => deleteConversation(showDeleteConversationModal)}
-              className="bg-red-500 hover:bg-red-600 text-white transition-colors text-sm font-medium"
-              aria-label="Confirm delete conversation"
+              className="bg-red-500 hover:bg-red-600 text-white transition-colors"
             >
               Delete
             </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
-      <Modal isOpen={isImageOpen} onClose={onImageClose} size="xl">
+
+      <Modal isOpen={isImageOpen} onClose={onImageClose} size="full">
         <ModalOverlay />
-        <ModalContent className="modal-content bg-transparent">
-          <ModalBody className="modal-body p-0">
-            <Image
-              src={expandedImage}
-              alt="Expanded chat image"
-              className="w-full h-auto rounded-lg shadow-2xl"
-              onClick={onImageClose}
-            />
+        <ModalContent className={`${currentTheme.secondary}`}>
+          <ModalBody className="flex items-center justify-center p-0">
+            <Image src={expandedImage} alt="Expanded chat image" className="max-h-[90vh] max-w-[90vw] object-contain" />
           </ModalBody>
-          <ModalFooter className="modal-footer">
-            <Button
-              onClick={onImageClose}
-              className="text-purple-300 hover:text-purple-400 transition-colors text-sm font-medium"
-              aria-label="Close image"
-            >
-              Close
-            </Button>
-          </ModalFooter>
         </ModalContent>
       </Modal>
-      <Modal isOpen={isFriendRequestsOpen} onClose={onFriendRequestsClose} size="md">
+
+      <Modal isOpen={isFriendRequestsOpen} onClose={onFriendRequestsClose} size="sm">
         <ModalOverlay />
-        <ModalContent className="modal-content">
-          <ModalHeader className={`modal-header ${currentTheme.modalHeader}`}>Friend Requests</ModalHeader>
-          <ModalBody className="modal-body">
+        <ModalContent className={`${currentTheme.modalHeader} ${currentTheme.secondary}`}>
+          <ModalHeader>Friend Requests</ModalHeader>
+          <ModalBody>
             {friendRequests.length === 0 ? (
-              <Text className={`${currentTheme.text} text-base text-center`}>No pending friend requests.</Text>
+              <Text className="text-gray-300 text-center">No friend requests</Text>
             ) : (
-              <VStack spacing={4}>
-                {friendRequests.map(req => (
-                  <MotionBox
-                    key={req.id}
-                    className={`p-4 ${currentTheme.secondary} rounded-xl w-full friend-request-item border border-white/25`}
-                    whileHover={{ scale: 1.02 }}
-                  >
-                    <Flex justify="space-between" align="center">
-                      <Text className={`font-medium ${currentTheme.text} text-base`}>
-                        {req.sender_username} wants to be friends
-                      </Text>
-                      {req.recipient_username === currentUsername && req.status === 'pending' && (
-                        <HStack spacing={2}>
-                          <Tooltip label="Accept friend request" placement="top">
-                            <IconButton
-                              icon={<FaCheck />}
-                              onClick={() => respondFriendRequest(req.id, true)}
-                              className="text-emerald-400 hover:text-emerald-500 transition-colors"
-                              aria-label={`Accept friend request from ${req.sender_username}`}
-                              size="sm"
-                            />
-                          </Tooltip>
-                          <Tooltip label="Reject friend request" placement="top">
-                            <IconButton
-                              icon={<FaTimes />}
-                              onClick={() => respondFriendRequest(req.id, false)}
-                              className="text-red-400 hover:text-red-500 transition-colors"
-                              aria-label={`Reject friend request from ${req.sender_username}`}
-                              size="sm"
-                            />
-                          </Tooltip>
-                        </HStack>
-                      )}
-                    </Flex>
-                  </MotionBox>
-                ))}
-              </VStack>
+              friendRequests.map(request => (
+                <Box key={request.id} className="p-4 border-b border-white/20 last:border-b-0">
+                  <Flex justify="space-between" align="center">
+                    <Text className={`${currentTheme.text} font-medium`}>{request.sender_username}</Text>
+                    <HStack spacing={2}>
+                      <Button
+                        onClick={() => respondFriendRequest(request.id, true)}
+                        className="bg-emerald-500 hover:bg-emerald-600 text-white transition-colors text-sm px-4 py-2 rounded-lg"
+                        aria-label={`Accept friend request from ${request.sender_username}`}
+                      >
+                        <FaCheck />
+                      </Button>
+                      <Button
+                        onClick={() => respondFriendRequest(request.id, false)}
+                        className="bg-red-500 hover:bg-red-600 text-white transition-colors text-sm px-4 py-2 rounded-lg"
+                        aria-label={`Reject friend request from ${request.sender_username}`}
+                      >
+                        <FaTimes />
+                      </Button>
+                    </HStack>
+                  </Flex>
+                </Box>
+              ))
             )}
           </ModalBody>
-          <ModalFooter className="modal-footer">
-            <Button
-              onClick={onFriendRequestsClose}
-              className="text-purple-300 hover:text-purple-400 transition-colors text-sm font-medium"
-              aria-label="Close friend requests"
-            >
+          <ModalFooter>
+            <Button onClick={onFriendRequestsClose} className="text-purple-300 hover:text-purple-400 transition-colors">
               Close
             </Button>
           </ModalFooter>
