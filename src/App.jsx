@@ -270,100 +270,101 @@ function App() {
   }, []);
 
   const connectWebSocket = useCallback(() => {
-  if (!token || socketRef.current?.readyState === WebSocket.OPEN) return;
+    if (!token || socketRef.current?.readyState === WebSocket.OPEN) return;
 
-  let reconnectAttempts = 0;
-  const maxAttempts = 5;
-  const maxDelay = 30000;
+    let reconnectAttempts = 0;
+    const maxAttempts = 5;
+    const maxDelay = 30000;
 
-  const attemptReconnect = () => {
-    if (reconnectAttempts >= maxAttempts) {
-      toast({
-        title: 'Connection Failed',
-        description: 'Unable to connect to the server. Please try again later.',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
-      return;
-    }
-
-    const ws = new WebSocket(`wss://chitchat-server-emw5.onrender.com/ws?token=${token}`); // Updated to wss://
-    socketRef.current = ws;
-
-    ws.onopen = () => {
-      setIsSocketConnected(true);
-      reconnectAttempts = 0;
-      toast({
-        title: 'Connected',
-        description: 'Real-time messaging enabled.',
-        status: 'success',
-        duration: 2000,
-        isClosable: true,
-      });
-    };
-
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      switch (data.type) {
-        case 'message':
-          handleNewMessage(data.data);
-          break;
-        case 'read':
-          handleMessageRead(data.data.id);
-          break;
-        case 'edit':
-          handleMessageEdit(data.data);
-          break;
-        case 'delete':
-          handleMessageDelete(data.data.id);
-          break;
-        case 'status':
-          handleUserStatus(data.data);
-          break;
-        case 'friend_accepted':
-          handleFriendAccepted(data.data);
-          break;
-        case 'typing':
-          handleTyping(data.data);
-          break;
-        case 'reaction':
-          handleReaction(data.data);
-          break;
-        case 'pinned':
-          handlePinned(data.data);
-          break;
-        case 'ping':
-          ws.send(JSON.stringify({ type: 'pong' }));
-          break;
-        default:
-          console.warn('Unknown WebSocket message type:', data.type);
+    const attemptReconnect = () => {
+      if (reconnectAttempts >= maxAttempts) {
+        toast({
+          title: 'Connection Failed',
+          description: 'Unable to connect to the server. Please try again later.',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+        return;
       }
+
+      const ws = new WebSocket(`wss://chitchat-server-emw5.onrender.com/ws?token=${token}`);
+      socketRef.current = ws;
+
+      ws.onopen = () => {
+        setIsSocketConnected(true);
+        reconnectAttempts = 0;
+        toast({
+          title: 'Connected',
+          description: 'Real-time messaging enabled.',
+          status: 'success',
+          duration: 2000,
+          isClosable: true,
+        });
+      };
+
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        switch (data.type) {
+          case 'message':
+            handleNewMessage(data.data);
+            break;
+          case 'read':
+            handleMessageRead(data.data.id);
+            break;
+          case 'edit':
+            handleMessageEdit(data.data);
+            break;
+          case 'delete':
+            handleMessageDelete(data.data.id);
+            break;
+          case 'status':
+            handleUserStatus(data.data);
+            break;
+          case 'friend_accepted':
+            handleFriendAccepted(data.data);
+            break;
+          case 'typing':
+            handleTyping(data.data);
+            break;
+          case 'reaction':
+            handleReaction(data.data);
+            break;
+          case 'pinned':
+            handlePinned(data.data);
+            break;
+          case 'ping':
+            ws.send(JSON.stringify({ type: 'pong' }));
+            break;
+          default:
+            console.warn('Unknown WebSocket message type:', data.type);
+        }
+      };
+
+      ws.onclose = (event) => {
+        setIsSocketConnected(false);
+        const delay = Math.min(1000 * 2 ** reconnectAttempts, maxDelay);
+        reconnectAttempts++;
+        toast({
+          title: 'Disconnected',
+          description: `Reconnecting in ${delay / 1000} seconds...`,
+          status: 'warning',
+          duration: 3000,
+          isClosable: true,
+        });
+        setTimeout(attemptReconnect, delay);
+      };
+
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        setIsSocketConnected(false);
+        ws.close();
+      };
     };
 
-    ws.onclose = (event) => {
-      setIsSocketConnected(false);
-      const delay = Math.min(1000 * 2 ** reconnectAttempts, maxDelay);
-      reconnectAttempts++;
-      toast({
-        title: 'Disconnected',
-        description: `Reconnecting in ${delay / 1000} seconds...`,
-        status: 'warning',
-        duration: 3000,
-        isClosable: true,
-      });
-      setTimeout(attemptReconnect, delay);
-    };
+    attemptReconnect();
+  }, [token, toast, handleNewMessage, handleMessageRead, handleMessageEdit, handleMessageDelete, handleUserStatus, handleFriendAccepted, handleTyping, handleReaction, handlePinned]);
 
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-      setIsSocketConnected(false);
-      ws.close();
-    };
-  };
-
-  attemptReconnect();
-}, [token, toast, handleNewMessage, handleMessageRead, handleMessageEdit, handleMessageDelete, handleUserStatus, handleFriendAccepted, handleTyping, handleReaction, handlePinned]);
   const fetchCurrentUser = useCallback(async () => {
     if (!token || currentUsername) return;
     setIsLoading(true);
@@ -468,7 +469,7 @@ function App() {
   useEffect(() => {
     if (selectedUser && conversations.length) {
       scrollToBottom();
-      setIsSidebarOpen(false); // Close sidebar when a user is selected
+      setIsSidebarOpen(false);
     }
   }, [selectedUser, conversations, scrollToBottom]);
 
@@ -824,7 +825,7 @@ function App() {
 
   const selectConversation = useCallback((username) => {
     setSelectedUser(username);
-    setIsSidebarOpen(false); // Close sidebar when selecting a conversation
+    setIsSidebarOpen(false);
     scrollToBottom();
   }, [scrollToBottom]);
 
@@ -995,7 +996,7 @@ function App() {
             scroll-behavior: smooth;
             overflow-x: hidden;
             overflow-y: auto;
-            height: calc(100vh - 160px);
+            height: calc(100vh - 180px); /* Adjusted for better mobile fit */
             scrollbar-width: thin;
             scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
           }
@@ -1106,6 +1107,9 @@ function App() {
             background: rgba(255, 255, 255, 0.12);
             backdrop-filter: blur(15px);
             border: 1px solid rgba(255, 255, 255, 0.25);
+            position: sticky;
+            bottom: 0;
+            z-index: 10;
           }
           .new-message {
             animation: slideIn 0.4s ease;
@@ -1165,10 +1169,19 @@ function App() {
               display: none;
             }
             .chat-container {
-              height: calc(100vh - 140px);
+              height: calc(100vh - 140px); /* Reduced height for input visibility */
+              margin-bottom: 60px; /* Ensure space for input container */
             }
             .input-container {
-              padding: 12px;
+              padding: 8px; /* Reduced padding for better fit */
+              position: fixed;
+              bottom: 0;
+              left: 0;
+              right: 0;
+              z-index: 20;
+              background: rgba(255, 255, 255, 0.12);
+              backdrop-filter: blur(15px);
+              border-top: 1px solid rgba(255, 255, 255, 0.25);
             }
             .message-bubble {
               max-width: 80%;
@@ -1406,7 +1419,7 @@ function App() {
                   >
                     <Flex justify="space-between" align="center">
                       <Text className={`font-medium ${currentTheme.text} text-base`}>{friend.username}</Text>
-                      <Tooltip label={`Send friend request to ${friend.username}`} placement="right">
+                      <Tooltip label={`Send friend request to ${friend}`} placement="right">
                         <IconButton
                           icon={<FaUserPlus />}
                           onClick={() => sendFriendRequest(friend.username)}
@@ -1764,7 +1777,7 @@ function App() {
         <ModalContent className="modal-content">
           <ModalHeader className={`modal-header ${currentTheme.modalHeader}`}>Delete Conversation</ModalHeader>
           <ModalBody className="modal-body">
-            <Text className={`${currentTheme.text} text-base`}>Are you sure you want to delete this conversation?</Text>
+            <Text className={`${currentTheme.text} text-base`}>Are you sure you want to delete the conversation with {showDeleteConversationModal}?</Text>
           </ModalBody>
           <ModalFooter className="modal-footer">
             <Button
@@ -1787,13 +1800,8 @@ function App() {
       <Modal isOpen={isImageOpen} onClose={onImageClose} size="xl">
         <ModalOverlay />
         <ModalContent className="modal-content bg-transparent">
-        <ModalBody className="modal-body p-0">
-            <Image
-              src={expandedImage}
-              alt="Expanded chat image"
-              className="w-full h-auto rounded-lg shadow-2xl"
-              onClick={onImageClose}
-            />
+          <ModalBody className="modal-body p-0">
+            <Image src={expandedImage} alt="Expanded chat image" className="w-full rounded-lg shadow-2xl" />
           </ModalBody>
           <ModalFooter className="modal-footer">
             <Button
@@ -1811,23 +1819,21 @@ function App() {
         <ModalContent className="modal-content">
           <ModalHeader className={`modal-header ${currentTheme.modalHeader}`}>Friend Requests</ModalHeader>
           <ModalBody className="modal-body">
-            {friendRequests.length === 0 ? (
-              <Text className={`${currentTheme.text} text-base text-center`}>No pending friend requests.</Text>
-            ) : (
-              <VStack spacing={4}>
-                {friendRequests.map(req => (
+            <VStack spacing={4}>
+              {friendRequests.length > 0 ? (
+                friendRequests.map(req => (
                   <MotionBox
                     key={req.id}
-                    className={`p-4 ${currentTheme.secondary} rounded-xl w-full friend-request-item border border-white/25`}
+                    className="p-4 bg-white/10 rounded-xl w-full friend-request-item border border-white/25"
                     whileHover={{ scale: 1.02 }}
                   >
                     <Flex justify="space-between" align="center">
-                      <Text className={`font-medium ${currentTheme.text} text-base`}>
-                        {req.sender_username} wants to be friends
+                      <Text className={`${currentTheme.text} text-base`}>
+                        {req.sender_username} wants to be your friend
                       </Text>
-                      {req.recipient_username === currentUsername && req.status === 'pending' && (
+                      {req.status === 'pending' && req.recipient_username === currentUsername && (
                         <HStack spacing={3}>
-                          <Tooltip label="Accept friend request" placement="top">
+                          <Tooltip label="Accept Friend Request" placement="top">
                             <IconButton
                               icon={<FaCheck />}
                               onClick={() => respondFriendRequest(req.id, true)}
@@ -1836,7 +1842,7 @@ function App() {
                               size="sm"
                             />
                           </Tooltip>
-                          <Tooltip label="Reject friend request" placement="top">
+                          <Tooltip label="Reject Friend Request" placement="top">
                             <IconButton
                               icon={<FaTimes />}
                               onClick={() => respondFriendRequest(req.id, false)}
@@ -1849,9 +1855,11 @@ function App() {
                       )}
                     </Flex>
                   </MotionBox>
-                ))}
-              </VStack>
-            )}
+                ))
+              ) : (
+                <Text className="text-gray-300 text-base text-center">No friend requests at the moment.</Text>
+              )}
+            </VStack>
           </ModalBody>
           <ModalFooter className="modal-footer">
             <Button
