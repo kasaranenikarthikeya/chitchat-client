@@ -82,7 +82,7 @@ html, body, #root {
   scroll-behavior: smooth;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
-  padding-top: 0 !important; /* Space for header */
+  padding-top: 40px !important; /* Space for date header */
   padding-bottom: 80px; /* Match input container height to prevent overlap */
   min-height: 0; /* Allow flex child to shrink */
   display: flex;
@@ -96,6 +96,25 @@ html, body, #root {
 .chat-container::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.3);
   border-radius: 3px;
+}
+
+.top-date-header {
+  position: sticky;
+  top: 80px; /* Below the header */
+  z-index: 10;
+  background: rgba(0, 0, 0, 0.9);
+  backdrop-filter: blur(10px);
+  padding: 8px 16px;
+  border-radius: 12px;
+  margin: 0 auto;
+  width: fit-content;
+  font-size: 0.9rem;
+  color: #d1d5db;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.date-header {
+  display: none; /* Hide the old inline date header */
 }
 
 .input-container {
@@ -144,11 +163,13 @@ html, body, #root {
 .message-bubble.self {
   margin-left: auto;
   border-bottom-right-radius: 6px;
+  background: linear-gradient(to right, teal-500, emerald-500); /* Sender bubble color */
 }
 
 .message-bubble.other {
   margin-right: auto;
   border-bottom-left-radius: 6px;
+  background: linear-gradient(to right, gray-600, blue-700); /* Receiver bubble color */
 }
 
 .message-bubble:hover {
@@ -158,6 +179,13 @@ html, body, #root {
 
 .message-bubble:hover .actions {
   opacity: 1;
+}
+
+.message-bubble .tick-mark {
+  color: #3b82f6; /* Blue color for tick marks */
+  font-size: 0.75rem;
+  margin-left: 4px;
+  visibility: visible; /* Ensure tick marks are visible */
 }
 
 .typing-dots span {
@@ -171,29 +199,12 @@ html, body, #root {
   100% { transform: translateY(0); opacity: 0.5; }
 }
 
-.top-date-header {
-  position: sticky;
-  top: 64px; /* Below the header */
-  z-index: 10;
-  background: rgba(0, 0, 0, 0.9);
-  backdrop-filter: blur(10px);
-  padding: 8px 16px;
-  border-radius: 12px;
-  margin: 0 auto;
-  width: fit-content;
-  font-size: 0.9rem;
-  color: #d1d5db;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
-
-.date-header {
-  display: none; /* Hide the old inline date header */
-}
-
 .typing-indicator {
   font-size: 0.85rem;
   color: #d8b4fe;
   animation: pulse 1.5s infinite;
+  display: flex;
+  align-items: center;
 }
 
 @keyframes pulse {
