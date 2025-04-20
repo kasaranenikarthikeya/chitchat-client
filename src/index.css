@@ -5,7 +5,7 @@
 @tailwind utilities;
 
 html, body, #root {
-  height: 100vh;
+  height: 100dvh; /* Use dynamic viewport height for mobile address bar */
   width: 100vw;
   overflow: hidden;
   margin: 0;
@@ -22,13 +22,13 @@ html, body, #root {
 .app-container {
   display: flex;
   flex-direction: row;
-  height: 100vh;
+  height: 100dvh;
   width: 100vw;
   overflow: hidden;
 }
 
 .sidebar-container {
-  height: 100vh;
+  height: 100dvh;
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
@@ -49,7 +49,7 @@ html, body, #root {
   flex: 1;
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100dvh;
   overflow: hidden;
 }
 
@@ -61,12 +61,14 @@ html, body, #root {
   height: 64px;
   z-index: 50;
   padding: 12px 16px;
+  padding-top: env(safe-area-inset-top, 12px); /* Account for status bar on mobile */
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   background: linear-gradient(to bottom, rgba(17, 24, 39, 0.95), rgba(17, 24, 39, 0.9));
   backdrop-filter: blur(12px);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); /* Add shadow for separation */
 }
 
 .chat-container {
@@ -76,8 +78,8 @@ html, body, #root {
   scroll-behavior: smooth;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
-  margin-top: 64px; /* Matches header height */
-  height: calc(100vh - 64px - 72px); /* 64px header, 72px input */
+  margin-top: 64px; /* Matches header height, adjusted for safe area */
+  height: calc(100dvh - 64px - 72px); /* Dynamic height minus header and input */
   padding-bottom: 16px;
 }
 
@@ -97,13 +99,13 @@ html, body, #root {
   right: 0;
   height: 72px;
   padding: 16px;
+  padding-bottom: env(safe-area-inset-bottom, 16px); /* Account for navigation bar */
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   background: linear-gradient(to top, rgba(17, 24, 39, 0.95), rgba(17, 24, 39, 0.9));
   backdrop-filter: blur(12px);
   z-index: 40;
   display: flex;
   align-items: center;
-  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .message-bubble {
@@ -253,25 +255,27 @@ html, body, #root {
   }
   .chat-container {
     margin-top: 64px;
-    height: calc(100vh - 64px - 64px);
+    height: calc(100dvh - 64px - 64px);
   }
   .header-container {
     height: 64px;
-    padding: 12px;
+    padding-top: env(safe-area-inset-top, 12px);
   }
 }
 
 @media (orientation: landscape) and (max-height: 500px) {
   .header-container {
     height: 56px;
+    padding-top: env(safe-area-inset-top, 8px);
   }
   .input-container {
     height: 56px;
     padding: 8px;
+    padding-bottom: env(safe-area-inset-bottom, 8px);
   }
   .chat-container {
     margin-top: 56px;
-    height: calc(100vh - 56px - 56px);
+    height: calc(100dvh - 56px - 56px);
   }
 }
 
