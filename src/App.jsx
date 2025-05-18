@@ -2018,7 +2018,7 @@ function App() {
   // const apiUrl = 'https://chitchat-server-emw5.onrender.com';
   // const wsUrl = 'wss://chitchat-server-emw5.onrender.com/ws';
   const apiUrl = 'https://chitchat-f4e6.onrender.com';
-  const apiUrl = 'wss://chitchat-f4e6.onrender.com/ws';
+  const wsUrl = 'wss://chitchat-f4e6.onrender.com/ws';
 
   // Updated theme with enhanced gradients and neumorphic styles
   const themes = {
