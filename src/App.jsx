@@ -2015,9 +2015,10 @@ function App() {
   // const apiUrl = 'http://localhost:8000';
   // const wsUrl = 'ws://localhost:8000/ws';
 
-  const apiUrl = 'https://chitchat-server-emw5.onrender.com';
-  const wsUrl = 'wss://chitchat-server-emw5.onrender.com/ws';
-
+  // const apiUrl = 'https://chitchat-server-emw5.onrender.com';
+  // const wsUrl = 'wss://chitchat-server-emw5.onrender.com/ws';
+  const apiUrl = 'https://chitchat-f4e6.onrender.com';
+  const apiUrl = 'wss://chitchat-f4e6.onrender.com/ws';
 
   // Updated theme with enhanced gradients and neumorphic styles
   const themes = {
