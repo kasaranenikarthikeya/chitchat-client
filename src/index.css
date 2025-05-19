@@ -22,12 +22,6 @@
   --mobile-sidebar-width: 85%;
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
 html, body, #root {
   height: 100dvh;
   width: 100vw;
@@ -59,23 +53,17 @@ html, body, #root {
 }
 
 .sidebar-container {
-  width: var(--sidebar-width, 320px); /* Fallback for width */
+  width: var(--sidebar-width);
   height: 100%;
-  background: #1e293b !important; /* Direct color as ultimate fallback */
-  background: var(--bg-secondary, #1e293b) !important; /* Use variable with fallback */
-  border-right: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  background: var(--bg-secondary, #1e293b); /* Fallback to #1e293b */
+  border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
-  transition: transform 0.3s var(--transition-timing, cubic-bezier(0.4, 0, 0.2, 1));
+  transition: transform 0.3s var(--transition-timing);
   position: relative;
   z-index: 20;
   overflow-y: auto;
   overflow-x: hidden;
-  color: var(--text-secondary, #94a3b8) !important;
-}
-
-.sidebar-container * {
-  color: var(--text-secondary, #94a3b8) !important;
 }
 
 .sidebar-container::-webkit-scrollbar {
@@ -448,18 +436,16 @@ html, body, #root {
     top: 0;
     bottom: 0;
     transform: translateX(-100%);
-    width: var(--mobile-sidebar-width, 85%);
+    width: var(--mobile-sidebar-width);
     max-width: 300px;
-    background: #1e293b !important; /* Direct color as ultimate fallback */
-    background: var(--bg-secondary, #1e293b) !important; /* Ensure background consistency */
+    background: var(--bg-secondary, #1e293b); /* Explicitly set for mobile */
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
-    color: var(--text-secondary, #94a3b8) !important;
   }
 
   .sidebar-container.open {
     transform: translateX(0);
   }
-}
+  
   .chat-section {
     width: 100%;
   }
@@ -494,6 +480,7 @@ html, body, #root {
   .message-actions {
     right: -2rem;
   }
+}
 
 /* Tablet Responsiveness */
 @media (min-width: 769px) and (max-width: 1024px) {
@@ -602,8 +589,8 @@ html, body, #root {
 /* Enhanced Dark Mode Support */
 @media (prefers-color-scheme: dark) {
   body {
-    background: var(--bg-primary, #0f172a);
-    color: var(--text-primary, #f8fafc);
+    background: var(--bg-primary);
+    color: var(--text-primary);
   }
 }
 
@@ -690,22 +677,63 @@ html, body, #root {
   }
 }
 
-.sidebar-container .chakra-menu__menu-list,
-.sidebar-container .chakra-tooltip,
-.sidebar-container .chakra-modal__content {
-  background: #1e293b !important;
+/* Chakra UI Overrides for Sidebar Components */
+.sidebar-container [class*="chakra-menu__menu-list"],
+.sidebar-container .chakra-menu__menu-list {
   background: var(--bg-secondary, #1e293b) !important;
   color: var(--text-secondary, #94a3b8) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-color: var(--border-color, rgba(255, 255, 255, 0.1)) !important;
 }
 
+.sidebar-container [class*="chakra-menu__menuitem"],
 .sidebar-container .chakra-menu__menuitem {
-  background: #1e293b !important;
-  background: var(--bg-secondary, #1e293b) !important;
+  background: transparent !important;
   color: var(--text-secondary, #94a3b8) !important;
-  transition: background 0.2s ease;
 }
 
+.sidebar-container [class*="chakra-menu__menuitem"]:hover,
 .sidebar-container .chakra-menu__menuitem:hover {
   background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.sidebar-container [class*="chakra-tooltip"],
+.sidebar-container .chakra-tooltip {
+  background: var(--bg-secondary, #1e293b) !important;
+  color: var(--text-secondary, #94a3b8) !important;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1)) !important;
+  box-shadow: 0 4px 12px var(--shadow-color, rgba(0, 0, 0, 0.2)) !important;
+}
+
+/* Ensure Drawer Content Matches Sidebar Theme in Mobile View */
+[class*="chakra-drawer__content"],
+.chakra-drawer__content {
+  background: var(--bg-secondary, #1e293b) !important;
+  color: var(--text-primary, #f8fafc) !important;
+}
+
+/* Ensure Nested Elements in Drawer Follow the Theme */
+.chakra-drawer__content [class*="chakra-menu__menu-list"],
+.chakra-drawer__content .chakra-menu__menu-list {
+  background: var(--bg-secondary, #1e293b) !important;
+  color: var(--text-secondary, #94a3b8) !important;
+  border-color: var(--border-color, rgba(255, 255, 255, 0.1)) !important;
+}
+
+.chakra-drawer__content [class*="chakra-menu__menuitem"],
+.chakra-drawer__content .chakra-menu__menuitem {
+  background: transparent !important;
+  color: var(--text-secondary, #94a3b8) !important;
+}
+
+.chakra-drawer__content [class*="chakra-menu__menuitem"]:hover,
+.chakra-drawer__content .chakra-menu__menuitem:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.chakra-drawer__content [class*="chakra-tooltip"],
+.chakra-drawer__content .chakra-tooltip {
+  background: var(--bg-secondary, #1e293b) !important;
+  color: var(--text-secondary, #94a3b8) !important;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1)) !important;
+  box-shadow: 0 4px 12px var(--shadow-color, rgba(0, 0, 0, 0.2)) !important;
 }
