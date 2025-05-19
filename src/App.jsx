@@ -1174,7 +1174,7 @@ function App() {
           icon={<FaLanguage />}
           size="xs"
           variant="ghost"
-          color="whiteAlpha.800"
+          color="var(--text-secondary, #94a3b8)"
           _hover={{ color: 'white' }}
           aria-label="Translate message"
           isLoading={isTranslating}
@@ -1468,19 +1468,47 @@ function App() {
     <Drawer isOpen={isDrawerOpen} placement="left" onClose={onDrawerClose}>
       <DrawerOverlay />
       <DrawerContent
-        bg="#1e293b" // Direct fallback
+        bg="#1e293b"
         className={currentTheme.secondary}
         p={4}
         maxW="80%"
         sx={{
-          background: '#1e293b !important', // Ultimate fallback
-          background: 'var(--bg-secondary, #1e293b) !important', // Force dark background
-          color: 'var(--text-primary, #f8fafc) !important', // Ensure text visibility
-          // Override all possible Chakra UI classes
-          '&, & .chakra-drawer__content, & [class*="chakra-drawer"], & [data-theme], & div': {
+          background: '#1e293b !important',
+          background: 'var(--bg-secondary, #1e293b) !important',
+          // Adjust text color for all elements inside DrawerContent
+          color: 'var(--text-secondary, #94a3b8) !important',
+          '&, & .chakra-drawer__content, & [class*="chakra-drawer"], & [data-theme], & div, & p, & span, & button, & li': {
             background: '#1e293b !important',
             background: 'var(--bg-secondary, #1e293b) !important',
-            color: 'var(--text-primary, #f8fafc) !important',
+            color: 'var(--text-secondary, #94a3b8) !important', // Apply to all text
+          },
+          // Override MenuList (three dots dropdown)
+          '& .chakra-menu__menu-list': {
+            background: '#1e293b !important',
+            background: 'var(--bg-secondary, #1e293b) !important',
+            color: 'var(--text-secondary, #94a3b8) !important',
+            border: '1px solid rgba(255, 255, 255, 0.1) !important',
+          },
+          '& .chakra-menu__menuitem': {
+            background: '#1e293b !important',
+            background: 'var(--bg-secondary, #1e293b) !important',
+            color: 'var(--text-secondary, #94a3b8) !important',
+            '&:hover': {
+              background: 'rgba(255, 255, 255, 0.1) !important', // Subtle hover effect
+            },
+          },
+          // Override Tooltip (if translate button uses one)
+          '& .chakra-tooltip': {
+            background: '#1e293b !important',
+            background: 'var(--bg-secondary, #1e293b) !important',
+            color: 'var(--text-secondary, #94a3b8) !important',
+            border: '1px solid rgba(255, 255, 255, 0.1) !important',
+          },
+          // Override Modal (if translate button opens a modal)
+          '& .chakra-modal__content': {
+            background: '#1e293b !important',
+            background: 'var(--bg-secondary, #1e293b) !important',
+            color: 'var(--text-secondary, #94a3b8) !important',
           },
         }}
       >
@@ -1498,8 +1526,8 @@ function App() {
             <IconButton
               icon={<FaClose />}
               onClick={onDrawerClose}
-              color="whiteAlpha.800"
-              _hover={{ color: 'white' }}
+              color="var(--text-secondary, #94a3b8)"
+              _hover={{ color: 'var(--text-primary, #f8fafc)' }}
               variant="ghost"
               size="sm"
               aria-label="Close drawer"
@@ -1542,13 +1570,47 @@ function App() {
                       </VStack>
                     </HStack>
                   </MotionBox>
+                  {/* Add Three Dots Menu and Translate Button */}
+    <HStack spacing={2} justify="flex-end">
+      {/* Three Dots Menu */}
+      <Menu>
+        <MenuButton
+          as={IconButton}
+          icon={<FaEllipsisV />}
+          variant="ghost"
+          color="var(--text-secondary, #94a3b8)"
+          size="sm"
+          aria-label="More options"
+        />
+        <MenuList>
+          <MenuItem onClick={() => toast({ title: 'Option 1', status: 'info', duration: 2000, isClosable: true })}>
+            Option 1
+          </MenuItem>
+          <MenuItem onClick={() => toast({ title: 'Option 2', status: 'info', duration: 2000, isClosable: true })}>
+            Option 2
+          </MenuItem>
+        </MenuList>
+      </Menu>
+      {/* Translate Button */}
+      <Tooltip label="Translate">
+        <IconButton
+          icon={<FaLanguage />}
+          variant="ghost"
+          color="var(--text-secondary, #94a3b8)"
+          size="sm"
+          aria-label="Translate"
+          onClick={() => toast({ title: 'Translate clicked', status: 'info', duration: 2000, isClosable: true })}
+        />
+      </Tooltip>
+    </HStack>
+    
                   {/* Search Bar */}
                   <Input
                     placeholder="Search friends..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className={currentTheme.input}
-                    color="white"
+                    color="var(--text-secondary, #94a3b8)"
                     _placeholder={{ color: 'gray.300' }}
                     fontSize="sm"
                     p={4}
@@ -1559,7 +1621,7 @@ function App() {
                   <MotionButton
                     onClick={searchUsers}
                     className={currentTheme.button}
-                    color="white"
+                    color="var(--text-secondary, #94a3b8)"
                     fontSize="sm"
                     p={4}
                     rounded="lg"
