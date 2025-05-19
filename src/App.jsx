@@ -97,7 +97,7 @@ function App() {
   // const wsUrl = 'ws://localhost:8000/ws';
 
   const apiUrl = 'https://chitchat-f4e6.onrender.com';
-  const wsUrl = 'ws://chitchat-f4e6.onrender.com/ws';
+  const wsUrl = 'wss://chitchat-f4e6.onrender.com/wss';
 
   // Updated theme with enhanced gradients and neumorphic styles
   const themes = {
