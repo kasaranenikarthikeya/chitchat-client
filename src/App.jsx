@@ -95,10 +95,8 @@ function App() {
 
   // const apiUrl = 'http://localhost:8000';
   // const wsUrl = 'ws://localhost:8000/ws';
-
   const apiUrl = 'https://chitchat-f4e6.onrender.com';
   const wsUrl = 'wss://chitchat-f4e6.onrender.com/ws';
-
   // Updated theme with enhanced gradients and neumorphic styles
   const themes = {
     neon: {
@@ -1451,48 +1449,60 @@ function App() {
     >
       {/* Sidebar for desktop, Drawer for mobile */}
       {isMobile ? (
-        <>
-          <IconButton
-            icon={isDrawerOpen ? <FaClose /> : <FaBars />}
-            onClick={isDrawerOpen ? onDrawerClose : onDrawerOpen}
-            position="fixed"
-            top={4}
-            left={4}
-            zIndex={50}
-            color="white"
-            bg="purple.600"
-            _hover={{ bg: 'purple.700' }}
-            _active={{ bg: 'purple.800' }}
-            size="lg"
-            aria-label={isDrawerOpen ? 'Close menu' : 'Open menu'}
-            rounded="full"
-          />
-          <Drawer isOpen={isDrawerOpen} placement="left" onClose={onDrawerClose}>
-            <DrawerOverlay />
-            <DrawerContent className={currentTheme.secondary} p={4} maxW="80%">
-              <DrawerHeader borderBottom="1px" borderColor="whiteAlpha.200">
-                <Flex justify="space-between" align="center">
-                  <Text
-                    fontSize="xl"
-                    fontWeight="bold"
-                    bgGradient="linear(to-r, pink.500, purple.500)"
-                    bgClip="text"
-                    textShadow="0 1px 2px rgba(0, 0, 0, 0.2)"
-                  >
-                    ChitChat
-                  </Text>
-                  <IconButton
-                    icon={<FaClose />}
-                    onClick={onDrawerClose}
-                    color="whiteAlpha.800"
-                    _hover={{ color: 'white' }}
-                    variant="ghost"
-                    size="sm"
-                    aria-label="Close drawer"
-                  />
-                </Flex>
-              </DrawerHeader>
-              <DrawerBody overflowY="auto" px={2}>
+  <>
+    <IconButton
+      icon={isDrawerOpen ? <FaClose /> : <FaBars />}
+      onClick={isDrawerOpen ? onDrawerClose : onDrawerOpen}
+      position="fixed"
+      top={4}
+      left={4}
+      zIndex={50}
+      color="white"
+      bg="purple.600"
+      _hover={{ bg: 'purple.700' }}
+      _active={{ bg: 'purple.800' }}
+      size="lg"
+      aria-label={isDrawerOpen ? 'Close menu' : 'Open menu'}
+      rounded="full"
+    />
+    <Drawer isOpen={isDrawerOpen} placement="left" onClose={onDrawerClose}>
+      <DrawerOverlay />
+      <DrawerContent
+        bg="#1e293b" // Explicit background color
+        className={currentTheme.secondary}
+        p={4}
+        maxW="80%"
+        sx={{
+          background: 'var(--bg-secondary, #1e293b) !important', // Force background
+          color: 'var(--text-primary, #f8fafc)', // Ensure text color
+          '& .chakra-ui-drawer__content': {
+            background: 'var(--bg-secondary, #1e293b) !important', // Override Chakra UI defaults
+          },
+        }}
+      >
+        <DrawerHeader borderBottom="1px" borderColor="whiteAlpha.200">
+          <Flex justify="space-between" align="center">
+            <Text
+              fontSize="xl"
+              fontWeight="bold"
+              bgGradient="linear(to-r, pink.500, purple.500)"
+              bgClip="text"
+              textShadow="0 1px 2px rgba(0, 0, 0, 0.2)"
+            >
+              ChitChat
+            </Text>
+            <IconButton
+              icon={<FaClose />}
+              onClick={onDrawerClose}
+              color="whiteAlpha.800"
+              _hover={{ color: 'white' }}
+              variant="ghost"
+              size="sm"
+              aria-label="Close drawer"
+            />
+          </Flex>
+        </DrawerHeader>
+        <DrawerBody overflowY="auto" px={2}>
                 <VStack spacing={4} align="stretch">
                   {/* Profile Card */}
                   <MotionBox
