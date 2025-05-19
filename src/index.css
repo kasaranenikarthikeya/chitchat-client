@@ -445,7 +445,7 @@ html, body, #root {
   .sidebar-container.open {
     transform: translateX(0);
   }
-  
+
   .chat-section {
     width: 100%;
   }
@@ -678,26 +678,49 @@ html, body, #root {
 }
 
 /* Chakra UI Overrides for Sidebar Components */
+.sidebar-container [class*="chakra-button"],
+.sidebar-container .chakra-button,
+.chakra-drawer__content [class*="chakra-button"],
+.chakra-drawer__content .chakra-button {
+  background: transparent !important;
+  color: var(--text-secondary, #94a3b8) !important;
+}
+
+.sidebar-container [class*="chakra-button"]:hover,
+.sidebar-container .chakra-button:hover,
+.chakra-drawer__content [class*="chakra-button"]:hover,
+.chakra-drawer__content .chakra-button:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
 .sidebar-container [class*="chakra-menu__menu-list"],
-.sidebar-container .chakra-menu__menu-list {
+.sidebar-container .chakra-menu__menu-list,
+.chakra-drawer__content [class*="chakra-menu__menu-list"],
+.chakra-drawer__content .chakra-menu__menu-list {
   background: var(--bg-secondary, #1e293b) !important;
   color: var(--text-secondary, #94a3b8) !important;
   border-color: var(--border-color, rgba(255, 255, 255, 0.1)) !important;
 }
 
 .sidebar-container [class*="chakra-menu__menuitem"],
-.sidebar-container .chakra-menu__menuitem {
+.sidebar-container .chakra-menu__menuitem,
+.chakra-drawer__content [class*="chakra-menu__menuitem"],
+.chakra-drawer__content .chakra-menu__menuitem {
   background: transparent !important;
   color: var(--text-secondary, #94a3b8) !important;
 }
 
 .sidebar-container [class*="chakra-menu__menuitem"]:hover,
-.sidebar-container .chakra-menu__menuitem:hover {
+.sidebar-container .chakra-menu__menuitem:hover,
+.chakra-drawer__content [class*="chakra-menu__menuitem"]:hover,
+.chakra-drawer__content .chakra-menu__menuitem:hover {
   background: rgba(255, 255, 255, 0.1) !important;
 }
 
 .sidebar-container [class*="chakra-tooltip"],
-.sidebar-container .chakra-tooltip {
+.sidebar-container .chakra-tooltip,
+.chakra-drawer__content [class*="chakra-tooltip"],
+.chakra-drawer__content .chakra-tooltip {
   background: var(--bg-secondary, #1e293b) !important;
   color: var(--text-secondary, #94a3b8) !important;
   border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1)) !important;
@@ -709,31 +732,4 @@ html, body, #root {
 .chakra-drawer__content {
   background: var(--bg-secondary, #1e293b) !important;
   color: var(--text-primary, #f8fafc) !important;
-}
-
-/* Ensure Nested Elements in Drawer Follow the Theme */
-.chakra-drawer__content [class*="chakra-menu__menu-list"],
-.chakra-drawer__content .chakra-menu__menu-list {
-  background: var(--bg-secondary, #1e293b) !important;
-  color: var(--text-secondary, #94a3b8) !important;
-  border-color: var(--border-color, rgba(255, 255, 255, 0.1)) !important;
-}
-
-.chakra-drawer__content [class*="chakra-menu__menuitem"],
-.chakra-drawer__content .chakra-menu__menuitem {
-  background: transparent !important;
-  color: var(--text-secondary, #94a3b8) !important;
-}
-
-.chakra-drawer__content [class*="chakra-menu__menuitem"]:hover,
-.chakra-drawer__content .chakra-menu__menuitem:hover {
-  background: rgba(255, 255, 255, 0.1) !important;
-}
-
-.chakra-drawer__content [class*="chakra-tooltip"],
-.chakra-drawer__content .chakra-tooltip {
-  background: var(--bg-secondary, #1e293b) !important;
-  color: var(--text-secondary, #94a3b8) !important;
-  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1)) !important;
-  box-shadow: 0 4px 12px var(--shadow-color, rgba(0, 0, 0, 0.2)) !important;
 }
