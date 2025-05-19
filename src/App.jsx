@@ -1174,7 +1174,7 @@ function App() {
           icon={<FaLanguage />}
           size="xs"
           variant="ghost"
-          color="var(--text-secondary, #94a3b8)"
+          color="whiteAlpha.800"
           _hover={{ color: 'white' }}
           aria-label="Translate message"
           isLoading={isTranslating}
@@ -1473,42 +1473,31 @@ function App() {
         p={4}
         maxW="80%"
         sx={{
-          background: '#1e293b !important',
           background: 'var(--bg-secondary, #1e293b) !important',
-          // Adjust text color for all elements inside DrawerContent
-          color: 'var(--text-secondary, #94a3b8) !important',
-          '&, & .chakra-drawer__content, & [class*="chakra-drawer"], & [data-theme], & div, & p, & span, & button, & li': {
-            background: '#1e293b !important',
+          color: 'var(--text-primary, #f8fafc) !important',
+          '&, & .chakra-drawer__content, & [class*="chakra-drawer"], & [data-theme], & div': {
             background: 'var(--bg-secondary, #1e293b) !important',
-            color: 'var(--text-secondary, #94a3b8) !important', // Apply to all text
+            color: 'var(--text-primary, #f8fafc) !important',
           },
-          // Override MenuList (three dots dropdown)
+          // Specific overrides for MenuList and Tooltip
           '& .chakra-menu__menu-list': {
-            background: '#1e293b !important',
             background: 'var(--bg-secondary, #1e293b) !important',
             color: 'var(--text-secondary, #94a3b8) !important',
-            border: '1px solid rgba(255, 255, 255, 0.1) !important',
+            borderColor: 'whiteAlpha.200 !important',
           },
           '& .chakra-menu__menuitem': {
-            background: '#1e293b !important',
-            background: 'var(--bg-secondary, #1e293b) !important',
+            background: 'transparent !important',
             color: 'var(--text-secondary, #94a3b8) !important',
-            '&:hover': {
-              background: 'rgba(255, 255, 255, 0.1) !important', // Subtle hover effect
+            _hover: {
+              background: 'whiteAlpha.100 !important',
             },
           },
-          // Override Tooltip (if translate button uses one)
           '& .chakra-tooltip': {
-            background: '#1e293b !important',
             background: 'var(--bg-secondary, #1e293b) !important',
             color: 'var(--text-secondary, #94a3b8) !important',
-            border: '1px solid rgba(255, 255, 255, 0.1) !important',
-          },
-          // Override Modal (if translate button opens a modal)
-          '& .chakra-modal__content': {
-            background: '#1e293b !important',
-            background: 'var(--bg-secondary, #1e293b) !important',
-            color: 'var(--text-secondary, #94a3b8) !important',
+            border: '1px solid',
+            borderColor: 'whiteAlpha.200 !important',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2) !important',
           },
         }}
       >
@@ -1526,8 +1515,8 @@ function App() {
             <IconButton
               icon={<FaClose />}
               onClick={onDrawerClose}
-              color="var(--text-secondary, #94a3b8)"
-              _hover={{ color: 'var(--text-primary, #f8fafc)' }}
+              color="whiteAlpha.800"
+              _hover={{ color: 'white' }}
               variant="ghost"
               size="sm"
               aria-label="Close drawer"
@@ -1535,445 +1524,253 @@ function App() {
           </Flex>
         </DrawerHeader>
         <DrawerBody overflowY="auto" px={2}>
-                <VStack spacing={4} align="stretch">
-                  {/* Profile Card */}
-                  <MotionBox
-                    p={4}
-                    bg="whiteAlpha.100"
-                    rounded="xl"
-                    border="1px"
-                    borderColor="whiteAlpha.200"
-                    boxShadow="0 4px 12px rgba(0, 0, 0, 0.1)"
-                    whileHover={{ scale: 1.02 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <HStack spacing={4}>
-                      <Avatar
-                        name={currentUsername}
-                        bgGradient="linear(to-r, pink.500, purple.500)"
-                        size="md"
-                        ring={2}
-                        ringColor="whiteAlpha.300"
-                      />
-                      <VStack align="start" spacing={1}>
-                        <Text fontWeight="semibold" color="white" fontSize="md">{currentUsername}</Text>
-                        <Badge
-                          bg={isSocketConnected ? 'emerald.400' : 'red.400'}
-                          color="gray.900"
-                          px={2}
-                          py={1}
-                          rounded="full"
-                          fontSize="xs"
-                        >
-                          {isSocketConnected ? 'Online' : 'Offline'}
-                        </Badge>
-                      </VStack>
-                    </HStack>
-                  </MotionBox>
-                  {/* Add Three Dots Menu and Translate Button */}
-    <HStack spacing={2} justify="flex-end">
-      {/* Three Dots Menu */}
-      <Menu>
-        <MenuButton
-          as={IconButton}
-          icon={<FaEllipsisV />}
-          variant="ghost"
-          color="var(--text-secondary, #94a3b8)"
-          size="sm"
-          aria-label="More options"
-        />
-        <MenuList>
-          <MenuItem onClick={() => toast({ title: 'Option 1', status: 'info', duration: 2000, isClosable: true })}>
-            Option 1
-          </MenuItem>
-          <MenuItem onClick={() => toast({ title: 'Option 2', status: 'info', duration: 2000, isClosable: true })}>
-            Option 2
-          </MenuItem>
-        </MenuList>
-      </Menu>
-      {/* Translate Button */}
-      <Tooltip label="Translate">
-        <IconButton
-          icon={<FaLanguage />}
-          variant="ghost"
-          color="var(--text-secondary, #94a3b8)"
-          size="sm"
-          aria-label="Translate"
-          onClick={() => toast({ title: 'Translate clicked', status: 'info', duration: 2000, isClosable: true })}
-        />
-      </Tooltip>
-    </HStack>
-    
-                  {/* Search Bar */}
-                  <Input
-                    placeholder="Search friends..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className={currentTheme.input}
-                    color="var(--text-secondary, #94a3b8)"
-                    _placeholder={{ color: 'gray.300' }}
-                    fontSize="sm"
-                    p={4}
-                    rounded="lg"
-                    focusBorderColor="purple.500"
-                    aria-label="Search friends"
-                  />
-                  <MotionButton
-                    onClick={searchUsers}
-                    className={currentTheme.button}
-                    color="var(--text-secondary, #94a3b8)"
-                    fontSize="sm"
-                    p={4}
-                    rounded="lg"
-                    w="full"
-                    _hover={{ bg: 'purple.700' }}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    isDisabled={isLoading}
-                    aria-label="Search users"
-                  >
-                    {isLoading ? <Spinner size="sm" /> : 'Search'}
-                  </MotionButton>
-                  {/* Search Results */}
-                  {isLoading && !isInitialLoad ? (
-                    <Text color="gray.300" fontSize="sm" textAlign="center">Loading...</Text>
-                  ) : isInitialLoad ? (
-                    <VStack spacing={3} w="full">
-                      {[...Array(3)].map((_, i) => (
-                        <Skeleton key={i} height="60px" w="full" rounded="xl" />
-                      ))}
-                    </VStack>
-                  ) : (
-                    <VStack spacing={3} maxH="200px" overflowY="auto" w="full">
-                      <AnimatePresence>
-                        {users.map(user => (
-                          <MotionBox
-                            key={user.id}
-                            p={3}
-                            bg="whiteAlpha.100"
-                            rounded="xl"
-                            border="1px"
-                            borderColor="whiteAlpha.200"
-                            w="full"
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            whileHover={{ scale: 1.02 }}
-                            transition={{ duration: 0.2 }}
-                          >
-                            <Flex justify="space-between" align="center">
-                              <Text
-                                fontWeight="medium"
-                                color="white"
-                                cursor="pointer"
-                                _hover={{ color: 'purple.300' }}
-                                fontSize="sm"
-                                onClick={() => {
-                                  selectConversation(user.username);
-                                  onDrawerClose();
-                                }}
-                                aria-label={`Chat with ${user.username}`}
-                              >
-                                {user.username}
-                              </Text>
-                              {!conversations.some(c => c.username === user.username) && (
-                                <Tooltip label={`Send friend request to ${user.username}`} placement="right">
-                                  <IconButton
-                                    icon={<FaUserPlus />}
-                                    onClick={() => sendFriendRequest(user.username)}
-                                    color="whiteAlpha.800"
-                                    _hover={{ color: 'white' }}
-                                    variant="ghost"
-                                    size="sm"
-                                    aria-label={`Send friend request to ${user.username}`}
-                                  />
-                                </Tooltip>
-                              )}
-                            </Flex>
-                          </MotionBox>
-                        ))}
-                      </AnimatePresence>
-                    </VStack>
-                  )}
-                  {/* Conversations List */}
-                  <VStack spacing={3} w="full">
-                    {isInitialLoad ? (
-                      <VStack spacing={3} w="full">
-                        {[...Array(3)].map((_, i) => (
-                          <Skeleton key={i} height="60px" w="full" rounded="xl" />
-                        ))}
-                      </VStack>
-                    ) : isLoading && !isInitialLoad ? (
-                      <Text color="gray.300" fontSize="sm" textAlign="center">Loading chats...</Text>
-                    ) : (
-                      conversations.map(conv => {
-                        const unreadCount = conv.messages.filter(msg => msg.sender_username === conv.username && !msg.is_read && msg.type !== 'friend_request').length;
-                        const isOnline = onlineUsers[conv.username] || false;
-                        const isTyping = typingUsers[conv.username] || false;
-                        return (
-                          <MotionBox
-                            key={conv.username}
-                            p={3}
-                            bg="whiteAlpha.100"
-                            rounded="xl"
-                            border="1px"
-                            borderColor="whiteAlpha.200"
-                            cursor="pointer"
-                            w="full"
-                            onClick={() => {
-                              selectConversation(conv.username);
-                              onDrawerClose();
-                            }}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            whileHover={{ scale: 1.02 }}
-                            transition={{ duration: 0.2 }}
-                          >
-                            <Flex justify="space-between" align="center" w="full">
-                              <HStack spacing={3}>
-                                <Avatar
-                                  name={conv.username}
-                                  bgGradient="linear(to-r, pink.500, purple.500)"
-                                  size="sm"
-                                  ring={2}
-                                  ringColor="whiteAlpha.300"
-                                />
-                                <VStack align="start" spacing={0}>
-                                  <Text fontWeight="medium" color="white" fontSize="sm">{conv.username}</Text>
-                                  {isTyping && (
-                                    <Text fontSize="xs" color="purple.300">
-                                      Typing <span className="typing-dots">
-                                        <span style={{ '--i': 1 }}>.</span>
-                                        <span style={{ '--i': 2 }}>.</span>
-                                        <span style={{ '--i': 3 }}>.</span>
-                                      </span>
-                                    </Text>
-                                  )}
-                                </VStack>
-                              </HStack>
-                              <VStack align="end" spacing={1}>
-                                {unreadCount > 0 && (
-                                  <Badge
-                                    bg="emerald.400"
-                                    color="gray.900"
-                                    rounded="full"
-                                    px={2}
-                                    py={1}
-                                    fontSize="xs"
-                                  >
-                                    {unreadCount}
-                                  </Badge>
-                                )}
-                                <Text
-                                  fontSize="xs"
-                                  color={isOnline ? 'emerald.300' : 'gray.400'}
-                                >
-                                  {isOnline ? 'Online' : lastSeen[conv.username] ? `Last seen ${formatLastSeen(lastSeen[conv.username])}` : ''}
-                                </Text>
-                              </VStack>
-                            </Flex>
-                          </MotionBox>
-                        );
-                      })
-                    )}
-                  </VStack>
-                  {/* Friend Requests Button */}
-                  <Tooltip label="View Friend Requests" placement="right">
-                    <MotionButton
-                      onClick={onFriendRequestsOpen}
-                      className={currentTheme.button}
-                      color="white"
-                      fontSize="sm"
-                      p={4}
-                      rounded="lg"
-                      w="full"
-                      _hover={{ bg: 'purple.700' }}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      aria-label="View friend requests"
-                    >
-                      Friend Requests {friendRequestCount > 0 && `(${friendRequestCount})`}
-                    </MotionButton>
-                  </Tooltip>
-                  {/* Theme and Logout Buttons */}
-                  <HStack w="full" justify="space-between">
-                    <Tooltip label="Change Theme" placement="right">
-                      <Menu>
-                        <MenuButton
-                          as={IconButton}
-                          icon={<FaPalette />}
-                          color="whiteAlpha.800"
-                          _hover={{ color: 'white' }}
-                          variant="ghost"
-                          size="sm"
-                          aria-label="Change theme"
-                        />
-                        <MenuList bg="gray.800" color="white" border="none">
-                          <MenuItem onClick={() => setTheme('neon')} _hover={{ bg: 'gray.700' }}>
-                            Neon
-                          </MenuItem>
-                        </MenuList>
-                      </Menu>
-                    </Tooltip>
-                    <Tooltip label="Log Out" placement="right">
-                      <IconButton
-                        icon={<FaSignOutAlt />}
-                        onClick={() => {
-                          localStorage.removeItem('token');
-                          localStorage.removeItem('username');
-                          setToken(null);
-                          setCurrentUsername('');
-                          if (socketRef.current) socketRef.current.close();
-                          toast({ title: 'Logged Out', status: 'info', duration: 2000, isClosable: true });
-                        }}
-                        color="whiteAlpha.800"
-                        _hover={{ color: 'white' }}
-                        variant="ghost"
-                        size="sm"
-                        aria-label="Log out"
-                      />
-                    </Tooltip>
-                  </HStack>
-                  {/* Suggested Friends */}
-                  <VStack spacing={3} w="full">
-                    <Text fontSize="sm" fontWeight="semibold" color="white">Suggested Friends</Text>
-                    {suggestedFriends.length > 0 ? (
-                      suggestedFriends.map(friend => (
-                        <MotionBox
-                          key={friend.id}
-                          p={3}
-                          bg="whiteAlpha.100"
-                          rounded="xl"
-                          border="1px"
-                          borderColor="whiteAlpha.200"
-                          w="full"
-                          whileHover={{ scale: 1.02 }}
-                          transition={{ duration: 0.2 }}
-                        >
-                          <Flex justify="space-between" align="center">
-                            <Text fontWeight="medium" color="white" fontSize="sm">{friend.username}</Text>
-                            <Tooltip label={`Send friend request to ${friend.username}`} placement="right">
-                              <IconButton
-                                icon={<FaUserPlus />}
-                                onClick={() => sendFriendRequest(friend.username)}
-                                color="whiteAlpha.800"
-                                _hover={{ color: 'white' }}
-                                variant="ghost"
-                                size="sm"
-                                aria-label={`Send friend request to ${friend.username}`}
-                              />
-                            </Tooltip>
-                          </Flex>
-                        </MotionBox>
-                      ))
-                    ) : (
-                      <Text color="gray.300" fontSize="sm" textAlign="center">No suggestions available</Text>
-                    )}
-                  </VStack>
-                </VStack>
-              </DrawerBody>
-            </DrawerContent>
-          </Drawer>
-        </>
-      ) : (
-        <MotionBox
-          ref={sidebarRef}
-          className={currentTheme.secondary}
-          w={{ base: '0', md: isSidebarOpen ? `${sidebarWidth}px` : '0' }}
-          minW={{ base: '0', md: isSidebarOpen ? '280px' : '0' }}
-          p={4}
-          boxShadow="0 4px 12px rgba(0, 0, 0, 0.2)"
-          borderRight="1px"
-          borderColor="whiteAlpha.200"
-          overflowY="auto"
-          initial="closed"
-          animate={isSidebarOpen ? 'open' : 'closed'}
-          variants={sidebarVariants}
-          transition={{ duration: 0.4, ease: 'easeOut' }}
-        >
-          <Box
-            className="resize-handle"
-            position="absolute"
-            right={0}
-            top={0}
-            h="full"
-            w="4px"
-            bg="transparent"
-            cursor="col-resize"
-            _hover={{ bg: 'purple.500' }}
-          />
-          {isSidebarOpen && (
-            <VStack spacing={4} align="stretch">
-              <Flex justify="space-between" align="center">
-                <Text
-                  fontSize="xl"
-                  fontWeight="bold"
+          <VStack spacing={4} align="stretch">
+            {/* Profile Card */}
+            <MotionBox
+              p={4}
+              bg="whiteAlpha.100"
+              rounded="xl"
+              border="1px"
+              borderColor="whiteAlpha.200"
+              boxShadow="0 4px 12px rgba(0, 0, 0, 0.1)"
+              whileHover={{ scale: 1.02 }}
+              transition={{ duration: 0.2 }}
+            >
+              <HStack spacing={4}>
+                <Avatar
+                  name={currentUsername}
                   bgGradient="linear(to-r, pink.500, purple.500)"
-                  bgClip="text"
-                  textShadow="0 1px 2px rgba(0, 0, 0, 0.2)"
-                >
-                  ChitChat
-                </Text>
-                <Tooltip label="Close Sidebar" placement="right">
-                  <IconButton
-                    icon={<FaChevronLeft />}
-                    onClick={() => setIsSidebarOpen(false)}
-                    color="whiteAlpha.800"
-                    _hover={{ color: 'white' }}
-                    variant="ghost"
-                    size="sm"
-                    aria-label="Close sidebar"
-                  />
-                </Tooltip>
-              </Flex>
-              <MotionBox
-                p={4}
-                bg="whiteAlpha.100"
-                rounded="xl"
-                border="1px"
-                borderColor="whiteAlpha.200"
-                boxShadow="0 4px 12px rgba(0, 0, 0, 0.1)"
-                whileHover={{ scale: 1.02 }}
-                transition={{ duration: 0.2 }}
-              >
-                <HStack spacing={4}>
-                  <Avatar
-                    name={currentUsername}
-                    bgGradient="linear(to-r, pink.500, purple.500)"
-                    size="md"
-                    ring={2}
-                    ringColor="whiteAlpha.300"
-                  />
-                  <VStack align="start" spacing={1}>
-                    <Text fontWeight="semibold" color="white" fontSize="md">{currentUsername}</Text>
-                    <Badge
-                      bg={isSocketConnected ? 'emerald.400' : 'red.400'}
-                      color="gray.900"
-                      px={2}
-                      py={1}
-                      rounded="full"
-                      fontSize="xs"
+                  size="md"
+                  ring={2}
+                  ringColor="whiteAlpha.300"
+                />
+                <VStack align="start" spacing={1}>
+                  <Text fontWeight="semibold" color="white" fontSize="md">{currentUsername}</Text>
+                  <Badge
+                    bg={isSocketConnected ? 'emerald.400' : 'red.400'}
+                    color="gray.900"
+                    px={2}
+                    py={1}
+                    rounded="full"
+                    fontSize="xs"
+                  >
+                    {isSocketConnected ? 'Online' : 'Offline'}
+                  </Badge>
+                </VStack>
+              </HStack>
+            </MotionBox>
+
+            {/* Add Three Dots Menu and Translate Button */}
+            <HStack spacing={2} justify="flex-end">
+              {/* Three Dots Menu */}
+              <Menu>
+                <MenuButton
+                  as={IconButton}
+                  icon={<FaEllipsisV />}
+                  variant="ghost"
+                  color="var(--text-secondary, #94a3b8)"
+                  size="sm"
+                  aria-label="More options"
+                />
+                <MenuList>
+                  <MenuItem onClick={() => toast({ title: 'Option 1', status: 'info', duration: 2000, isClosable: true })}>
+                    Option 1
+                  </MenuItem>
+                  <MenuItem onClick={() => toast({ title: 'Option 2', status: 'info', duration: 2000, isClosable: true })}>
+                    Option 2
+                  </MenuItem>
+                </MenuList>
+              </Menu>
+              {/* Translate Button */}
+              <Tooltip label="Translate">
+                <IconButton
+                  icon={<FaLanguage />}
+                  variant="ghost"
+                  color="var(--text-secondary, #94a3b8)"
+                  size="sm"
+                  aria-label="Translate"
+                  onClick={() => toast({ title: 'Translate clicked', status: 'info', duration: 2000, isClosable: true })}
+                />
+              </Tooltip>
+            </HStack>
+
+            {/* Search Bar */}
+            <Input
+              placeholder="Search friends..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className={currentTheme.input}
+              color="white"
+              _placeholder={{ color: 'gray.300' }}
+              fontSize="sm"
+              p={4}
+              rounded="lg"
+              focusBorderColor="purple.500"
+              aria-label="Search friends"
+            />
+            <MotionButton
+              onClick={searchUsers}
+              className={currentTheme.button}
+              color="white"
+              fontSize="sm"
+              p={4}
+              rounded="lg"
+              w="full"
+              _hover={{ bg: 'purple.700' }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              isDisabled={isLoading}
+              aria-label="Search users"
+            >
+              {isLoading ? <Spinner size="sm" /> : 'Search'}
+            </MotionButton>
+            {/* Search Results */}
+            {isLoading && !isInitialLoad ? (
+              <Text color="gray.300" fontSize="sm" textAlign="center">Loading...</Text>
+            ) : isInitialLoad ? (
+              <VStack spacing={3} w="full">
+                {[...Array(3)].map((_, i) => (
+                  <Skeleton key={i} height="60px" w="full" rounded="xl" />
+                ))}
+              </VStack>
+            ) : (
+              <VStack spacing={3} maxH="200px" overflowY="auto" w="full">
+                <AnimatePresence>
+                  {users.map(user => (
+                    <MotionBox
+                      key={user.id}
+                      p={3}
+                      bg="whiteAlpha.100"
+                      rounded="xl"
+                      border="1px"
+                      borderColor="whiteAlpha.200"
+                      w="full"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      whileHover={{ scale: 1.02 }}
+                      transition={{ duration: 0.2 }}
                     >
-                      {isSocketConnected ? 'Online' : 'Offline'}
-                    </Badge>
-                  </VStack>
-                </HStack>
-              </MotionBox>
-              <Input
-                placeholder="Search friends..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className={currentTheme.input}
-                color="white"
-                _placeholder={{ color: 'gray.300' }}
-                fontSize="sm"
-                p={4}
-                rounded="lg"
-                focusBorderColor="purple.500"
-                aria-label="Search friends"
-              />
+                      <Flex justify="space-between" align="center">
+                        <Text
+                          fontWeight="medium"
+                          color="white"
+                          cursor="pointer"
+                          _hover={{ color: 'purple.300' }}
+                          fontSize="sm"
+                          onClick={() => {
+                            selectConversation(user.username);
+                            onDrawerClose();
+                          }}
+                          aria-label={`Chat with ${user.username}`}
+                        >
+                          {user.username}
+                        </Text>
+                        {!conversations.some(c => c.username === user.username) && (
+                          <Tooltip label={`Send friend request to ${user.username}`} placement="right">
+                            <IconButton
+                              icon={<FaUserPlus />}
+                              onClick={() => sendFriendRequest(user.username)}
+                              color="whiteAlpha.800"
+                              _hover={{ color: 'white' }}
+                              variant="ghost"
+                              size="sm"
+                              aria-label={`Send friend request to ${user.username}`}
+                            />
+                          </Tooltip>
+                        )}
+                      </Flex>
+                    </MotionBox>
+                  ))}
+                </AnimatePresence>
+              </VStack>
+            )}
+            {/* Conversations List */}
+            <VStack spacing={3} w="full">
+              {isInitialLoad ? (
+                <VStack spacing={3} w="full">
+                  {[...Array(3)].map((_, i) => (
+                    <Skeleton key={i} height="60px" w="full" rounded="xl" />
+                  ))}
+                </VStack>
+              ) : isLoading && !isInitialLoad ? (
+                <Text color="gray.300" fontSize="sm" textAlign="center">Loading chats...</Text>
+              ) : (
+                conversations.map(conv => {
+                  const unreadCount = conv.messages.filter(msg => msg.sender_username === conv.username && !msg.is_read && msg.type !== 'friend_request').length;
+                  const isOnline = onlineUsers[conv.username] || false;
+                  const isTyping = typingUsers[conv.username] || false;
+                  return (
+                    <MotionBox
+                      key={conv.username}
+                      p={3}
+                      bg="whiteAlpha.100"
+                      rounded="xl"
+                      border="1px"
+                      borderColor="whiteAlpha.200"
+                      cursor="pointer"
+                      w="full"
+                      onClick={() => {
+                        selectConversation(conv.username);
+                        onDrawerClose();
+                      }}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      whileHover={{ scale: 1.02 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <Flex justify="space-between" align="center" w="full">
+                        <HStack spacing={3}>
+                          <Avatar
+                            name={conv.username}
+                            bgGradient="linear(to-r, pink.500, purple.500)"
+                            size="sm"
+                            ring={2}
+                            ringColor="whiteAlpha.300"
+                          />
+                          <VStack align="start" spacing={0}>
+                            <Text fontWeight="medium" color="white" fontSize="sm">{conv.username}</Text>
+                            {isTyping && (
+                              <Text fontSize="xs" color="purple.300">
+                                Typing <span className="typing-dots">
+                                  <span style={{ '--i': 1 }}>.</span>
+                                  <span style={{ '--i': 2 }}>.</span>
+                                  <span style={{ '--i': 3 }}>.</span>
+                                </span>
+                              </Text>
+                            )}
+                          </VStack>
+                        </HStack>
+                        <VStack align="end" spacing={1}>
+                          {unreadCount > 0 && (
+                            <Badge
+                              bg="emerald.400"
+                              color="gray.900"
+                              rounded="full"
+                              px={2}
+                              py={1}
+                              fontSize="xs"
+                            >
+                              {unreadCount}
+                            </Badge>
+                          )}
+                          <Text
+                            fontSize="xs"
+                            color={isOnline ? 'emerald.300' : 'gray.400'}
+                          >
+                            {isOnline ? 'Online' : lastSeen[conv.username] ? `Last seen ${formatLastSeen(lastSeen[conv.username])}` : ''}
+                          </Text>
+                        </VStack>
+                      </Flex>
+                    </MotionBox>
+                  );
+                })
+              )}
+            </VStack>
+            {/* Friend Requests Button */}
+            <Tooltip label="View Friend Requests" placement="right">
               <MotionButton
-                onClick={searchUsers}
+                onClick={onFriendRequestsOpen}
                 className={currentTheme.button}
                 color="white"
                 fontSize="sm"
@@ -1983,239 +1780,434 @@ function App() {
                 _hover={{ bg: 'purple.700' }}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                isDisabled={isLoading}
-                aria-label="Search users"
+                aria-label="View friend requests"
               >
-                {isLoading ? <Spinner size="sm" /> : 'Search'}
+                Friend Requests {friendRequestCount > 0 && `(${friendRequestCount})`}
               </MotionButton>
-              {isLoading && !isInitialLoad ? (
-                <Text color="gray.300" fontSize="sm" textAlign="center">Loading...</Text>
-              ) : isInitialLoad ? (
-                <VStack spacing={3} w="full">
-                  {[...Array(3)].map((_, i) => (
-                    <Skeleton key={i} height="60px" w="full" rounded="xl" />
-                  ))}
-                </VStack>
-              ) : (
-                <VStack spacing={3} maxH="200px" overflowY="auto" w="full">
-                  <AnimatePresence>
-                    {users.map(user => (
-                      <MotionBox
-                        key={user.id}
-                        p={3}
-                        bg="whiteAlpha.100"
-                        rounded="xl"
-                        border="1px"
-                        borderColor="whiteAlpha.200"
-                        w="full"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        whileHover={{ scale: 1.02 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <Flex justify="space-between" align="center">
-                          <Text
-                            fontWeight="medium"
-                            color="white"
-                            cursor="pointer"
-                            _hover={{ color: 'purple.300' }}
-                            fontSize="sm"
-                            onClick={() => selectConversation(user.username)}
-                            aria-label={`Chat with ${user.username}`}
-                          >
-                            {user.username}
-                          </Text>
-                          {!conversations.some(c => c.username === user.username) && (
-                            <Tooltip label={`Send friend request to ${user.username}`} placement="right">
-                              <IconButton
-                                icon={<FaUserPlus />}
-                                onClick={() => sendFriendRequest(user.username)}
-                                color="whiteAlpha.800"
-                                _hover={{ color: 'white' }}
-                                variant="ghost"
-                                size="sm"
-                                aria-label={`Send friend request to ${user.username}`}
-                              />
-                            </Tooltip>
-                          )}
-                        </Flex>
-                      </MotionBox>
-                    ))}
-                  </AnimatePresence>
-                </VStack>
-              )}
-              <VStack spacing={3} w="full">
-                {isInitialLoad ? (
-                  <VStack spacing={3} w="full">
-                    {[...Array(3)].map((_, i) => (
-                      <Skeleton key={i} height="60px" w="full" rounded="xl" />
-                    ))}
-                  </VStack>
-                ) : isLoading && !isInitialLoad ? (
-                  <Text color="gray.300" fontSize="sm" textAlign="center">Loading chats...</Text>
-                ) : (
-                  conversations.map(conv => {
-                    const unreadCount = conv.messages.filter(msg => msg.sender_username === conv.username && !msg.is_read && msg.type !== 'friend_request').length;
-                    const isOnline = onlineUsers[conv.username] || false;
-                    const isTyping = typingUsers[conv.username] || false;
-                    return (
-                      <MotionBox
-                        key={conv.username}
-                        p={3}
-                        bg="whiteAlpha.100"
-                        rounded="xl"
-                        border="1px"
-                        borderColor="whiteAlpha.200"
-                        cursor="pointer"
-                        w="full"
-                        onClick={() => selectConversation(conv.username)}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        whileHover={{ scale: 1.02 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <Flex justify="space-between" align="center" w="full">
-                          <HStack spacing={3}>
-                            <Avatar
-                              name={conv.username}
-                              bgGradient="linear(to-r, pink.500, purple.500)"
-                              size="sm"
-                              ring={2}
-                              ringColor="whiteAlpha.300"
-                            />
-                            <VStack align="start" spacing={0}>
-                              <Text fontWeight="medium" color="white" fontSize="sm">{conv.username}</Text>
-                              {isTyping && (
-                                <Text fontSize="xs" color="purple.300">
-                                  Typing <span className="typing-dots">
-                                    <span style={{ '--i': 1 }}>.</span>
-                                    <span style={{ '--i': 2 }}>.</span>
-                                    <span style={{ '--i': 3 }}>.</span>
-                                  </span>
-                                </Text>
-                              )}
-                            </VStack>
-                          </HStack>
-                          <VStack align="end" spacing={1}>
-                            {unreadCount > 0 && (
-                              <Badge
-                                bg="emerald.400"
-                                color="gray.900"
-                                rounded="full"
-                                px={2}
-                                py={1}
-                                fontSize="xs"
-                              >
-                                {unreadCount}
-                              </Badge>
-                            )}
-                            <Text
-                              fontSize="xs"
-                              color={isOnline ? 'emerald.300' : 'gray.400'}
-                            >
-                              {isOnline ? 'Online' : lastSeen[conv.username] ? `Last seen ${formatLastSeen(lastSeen[conv.username])}` : ''}
-                            </Text>
-                          </VStack>
-                        </Flex>
-                      </MotionBox>
-                    );
-                  })
-                )}
-              </VStack>
-              <Tooltip label="View Friend Requests" placement="right">
-                <MotionButton
-                  onClick={onFriendRequestsOpen}
-                  className={currentTheme.button}
-                  color="white"
-                  fontSize="sm"
-                  p={4}
-                  rounded="lg"
-                  w="full"
-                  _hover={{ bg: 'purple.700' }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  aria-label="View friend requests"
-                >
-                  Friend Requests {friendRequestCount > 0 && `(${friendRequestCount})`}
-                </MotionButton>
-              </Tooltip>
-              <HStack w="full" justify="space-between">
-                <Tooltip label="Change Theme" placement="right">
-                  <Menu>
-                    <MenuButton
-                      as={IconButton}
-                      icon={<FaPalette />}
-                      color="whiteAlpha.800"
-                      _hover={{ color: 'white' }}
-                      variant="ghost"
-                      size="sm"
-                      aria-label="Change theme"
-                    />
-                    <MenuList bg="gray.800" color="white" border="none">
-                      <MenuItem onClick={() => setTheme('neon')} _hover={{ bg: 'gray.700' }}>
-                        Neon
-                      </MenuItem>
-                    </MenuList>
-                  </Menu>
-                </Tooltip>
-                <Tooltip label="Log Out" placement="right">
-                  <IconButton
-                    icon={<FaSignOutAlt />}
-                    onClick={() => {
-                      localStorage.removeItem('token');
-                      localStorage.removeItem('username');
-                      setToken(null);
-                      setCurrentUsername('');
-                      if (socketRef.current) socketRef.current.close();
-                      toast({ title: 'Logged Out', status: 'info', duration: 2000, isClosable: true });
-                    }}
+            </Tooltip>
+            {/* Theme and Logout Buttons */}
+            <HStack w="full" justify="space-between">
+              <Tooltip label="Change Theme" placement="right">
+                <Menu>
+                  <MenuButton
+                    as={IconButton}
+                    icon={<FaPalette />}
                     color="whiteAlpha.800"
                     _hover={{ color: 'white' }}
                     variant="ghost"
                     size="sm"
-                    aria-label="Log out"
+                    aria-label="Change theme"
                   />
-                </Tooltip>
-              </HStack>
-              <VStack spacing={3} w="full">
-                <Text fontSize="sm" fontWeight="semibold" color="white">Suggested Friends</Text>
-                {suggestedFriends.length > 0 ? (
-                  suggestedFriends.map(friend => (
-                    <MotionBox
-                      key={friend.id}
-                      p={3}
-                      bg="whiteAlpha.100"
-                      rounded="xl"
-                      border="1px"
-                      borderColor="whiteAlpha.200"
-                      w="full"
-                      whileHover={{ scale: 1.02 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <Flex justify="space-between" align="center">
-                        <Text fontWeight="medium" color="white" fontSize="sm">{friend.username}</Text>
-                        <Tooltip label={`Send friend request to ${friend.username}`} placement="right">
-                          <IconButton
-                            icon={<FaUserPlus />}
-                            onClick={() => sendFriendRequest(friend.username)}
-                            color="whiteAlpha.800"
-                            _hover={{ color: 'white' }}
-                            variant="ghost"
-                            size="sm"
-                            aria-label={`Send friend request to ${friend.username}`}
-                          />
-                        </Tooltip>
-                      </Flex>
-                    </MotionBox>
-                  ))
-                ) : (
-                  <Text color="gray.300" fontSize="sm" textAlign="center">No suggestions available</Text>
-                )}
-              </VStack>
+                  <MenuList>
+                    <MenuItem onClick={() => setTheme('neon')}>
+                      Neon
+                    </MenuItem>
+                  </MenuList>
+                </Menu>
+              </Tooltip>
+              <Tooltip label="Log Out" placement="right">
+                <IconButton
+                  icon={<FaSignOutAlt />}
+                  onClick={() => {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('username');
+                    setToken(null);
+                    setCurrentUsername('');
+                    if (socketRef.current) socketRef.current.close();
+                    toast({ title: 'Logged Out', status: 'info', duration: 2000, isClosable: true });
+                  }}
+                  color="whiteAlpha.800"
+                  _hover={{ color: 'white' }}
+                  variant="ghost"
+                  size="sm"
+                  aria-label="Log out"
+                />
+              </Tooltip>
+            </HStack>
+            {/* Suggested Friends */}
+            <VStack spacing={3} w="full">
+              <Text fontSize="sm" fontWeight="semibold" color="white">Suggested Friends</Text>
+              {suggestedFriends.length > 0 ? (
+                suggestedFriends.map(friend => (
+                  <MotionBox
+                    key={friend.id}
+                    p={3}
+                    bg="whiteAlpha.100"
+                    rounded="xl"
+                    border="1px"
+                    borderColor="whiteAlpha.200"
+                    w="full"
+                    whileHover={{ scale: 1.02 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Flex justify="space-between" align="center">
+                      <Text fontWeight="medium" color="white" fontSize="sm">{friend.username}</Text>
+                      <Tooltip label={`Send friend request to ${friend.username}`} placement="right">
+                        <IconButton
+                          icon={<FaUserPlus />}
+                          onClick={() => sendFriendRequest(friend.username)}
+                          color="whiteAlpha.800"
+                          _hover={{ color: 'white' }}
+                          variant="ghost"
+                          size="sm"
+                          aria-label={`Send friend request to ${friend.username}`}
+                        />
+                      </Tooltip>
+                    </Flex>
+                  </MotionBox>
+                ))
+              ) : (
+                <Text color="gray.300" fontSize="sm" textAlign="center">No suggestions available</Text>
+              )}
             </VStack>
-          )}
+          </VStack>
+        </DrawerBody>
+      </DrawerContent>
+    </Drawer>
+  </>
+) : (
+  // Desktop sidebar remains unchanged for now
+  <MotionBox
+    ref={sidebarRef}
+    className={currentTheme.secondary}
+    w={{ base: '0', md: isSidebarOpen ? `${sidebarWidth}px` : '0' }}
+    minW={{ base: '0', md: isSidebarOpen ? '280px' : '0' }}
+    p={4}
+    boxShadow="0 4px 12px rgba(0, 0, 0, 0.2)"
+    borderRight="1px"
+    borderColor="whiteAlpha.200"
+    overflowY="auto"
+    initial="closed"
+    animate={isSidebarOpen ? 'open' : 'closed'}
+    variants={sidebarVariants}
+    transition={{ duration: 0.4, ease: 'easeOut' }}
+  >
+    {/* Existing desktop sidebar code remains unchanged */}
+    <Box
+      className="resize-handle"
+      position="absolute"
+      right={0}
+      top={0}
+      h="full"
+      w="4px"
+      bg="transparent"
+      cursor="col-resize"
+      _hover={{ bg: 'purple.500' }}
+    />
+    {isSidebarOpen && (
+      <VStack spacing={4} align="stretch">
+        <Flex justify="space-between" align="center">
+          <Text
+            fontSize="xl"
+            fontWeight="bold"
+            bgGradient="linear(to-r, pink.500, purple.500)"
+            bgClip="text"
+            textShadow="0 1px 2px rgba(0, 0, 0, 0.2)"
+          >
+            ChitChat
+          </Text>
+          <Tooltip label="Close Sidebar" placement="right">
+            <IconButton
+              icon={<FaChevronLeft />}
+              onClick={() => setIsSidebarOpen(false)}
+              color="whiteAlpha.800"
+              _hover={{ color: 'white' }}
+              variant="ghost"
+              size="sm"
+              aria-label="Close sidebar"
+            />
+          </Tooltip>
+        </Flex>
+        <MotionBox
+          p={4}
+          bg="whiteAlpha.100"
+          rounded="xl"
+          border="1px"
+          borderColor="whiteAlpha.200"
+          boxShadow="0 4px 12px rgba(0, 0, 0, 0.1)"
+          whileHover={{ scale: 1.02 }}
+          transition={{ duration: 0.2 }}
+        >
+          <HStack spacing={4}>
+            <Avatar
+              name={currentUsername}
+              bgGradient="linear(to-r, pink.500, purple.500)"
+              size="md"
+              ring={2}
+              ringColor="whiteAlpha.300"
+            />
+            <VStack align="start" spacing={1}>
+              <Text fontWeight="semibold" color="white" fontSize="md">{currentUsername}</Text>
+              <Badge
+                bg={isSocketConnected ? 'emerald.400' : 'red.400'}
+                color="gray.900"
+                px={2}
+                py={1}
+                rounded="full"
+                fontSize="xs"
+              >
+                {isSocketConnected ? 'Online' : 'Offline'}
+              </Badge>
+            </VStack>
+          </HStack>
         </MotionBox>
+        <Input
+          placeholder="Search friends..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className={currentTheme.input}
+          color="white"
+          _placeholder={{ color: 'gray.300' }}
+          fontSize="sm"
+          p={4}
+          rounded="lg"
+          focusBorderColor="purple.500"
+          aria-label="Search friends"
+        />
+        <MotionButton
+          onClick={searchUsers}
+          className={currentTheme.button}
+          color="white"
+          fontSize="sm"
+          p={4}
+          rounded="lg"
+          w="full"
+          _hover={{ bg: 'purple.700' }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          isDisabled={isLoading}
+          aria-label="Search users"
+        >
+          {isLoading ? <Spinner size="sm" /> : 'Search'}
+        </MotionButton>
+        {isLoading && !isInitialLoad ? (
+          <Text color="gray.300" fontSize="sm" textAlign="center">Loading...</Text>
+        ) : isInitialLoad ? (
+          <VStack spacing={3} w="full">
+            {[...Array(3)].map((_, i) => (
+              <Skeleton key={i} height="60px" w="full" rounded="xl" />
+            ))}
+          </VStack>
+        ) : (
+          <VStack spacing={3} maxH="200px" overflowY="auto" w="full">
+            <AnimatePresence>
+              {users.map(user => (
+                <MotionBox
+                  key={user.id}
+                  p={3}
+                  bg="whiteAlpha.100"
+                  rounded="xl"
+                  border="1px"
+                  borderColor="whiteAlpha.200"
+                  w="full"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  whileHover={{ scale: 1.02 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Flex justify="space-between" align="center">
+                    <Text
+                      fontWeight="medium"
+                      color="white"
+                      cursor="pointer"
+                      _hover={{ color: 'purple.300' }}
+                      fontSize="sm"
+                      onClick={() => selectConversation(user.username)}
+                      aria-label={`Chat with ${user.username}`}
+                    >
+                      {user.username}
+                    </Text>
+                    {!conversations.some(c => c.username === user.username) && (
+                      <Tooltip label={`Send friend request to ${user.username}`} placement="right">
+                        <IconButton
+                          icon={<FaUserPlus />}
+                          onClick={() => sendFriendRequest(user.username)}
+                          color="whiteAlpha.800"
+                          _hover={{ color: 'white' }}
+                          variant="ghost"
+                          size="sm"
+                          aria-label={`Send friend request to ${user.username}`}
+                        />
+                      </Tooltip>
+                    )}
+                  </Flex>
+                </MotionBox>
+              ))}
+            </AnimatePresence>
+          </VStack>
+        )}
+        <VStack spacing={3} w="full">
+          {isInitialLoad ? (
+            <VStack spacing={3} w="full">
+              {[...Array(3)].map((_, i) => (
+                <Skeleton key={i} height="60px" w="full" rounded="xl" />
+              ))}
+            </VStack>
+          ) : isLoading && !isInitialLoad ? (
+            <Text color="gray.300" fontSize="sm" textAlign="center">Loading chats...</Text>
+          ) : (
+            conversations.map(conv => {
+              const unreadCount = conv.messages.filter(msg => msg.sender_username === conv.username && !msg.is_read && msg.type !== 'friend_request').length;
+              const isOnline = onlineUsers[conv.username] || false;
+              const isTyping = typingUsers[conv.username] || false;
+              return (
+                <MotionBox
+                  key={conv.username}
+                  p={3}
+                  bg="whiteAlpha.100"
+                  rounded="xl"
+                  border="1px"
+                  borderColor="whiteAlpha.200"
+                  cursor="pointer"
+                  w="full"
+                  onClick={() => selectConversation(conv.username)}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  whileHover={{ scale: 1.02 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Flex justify="space-between" align="center" w="full">
+                    <HStack spacing={3}>
+                      <Avatar
+                        name={conv.username}
+                        bgGradient="linear(to-r, pink.500, purple.500)"
+                        size="sm"
+                        ring={2}
+                        ringColor="whiteAlpha.300"
+                      />
+                      <VStack align="start" spacing={0}>
+                        <Text fontWeight="medium" color="white" fontSize="sm">{conv.username}</Text>
+                        {isTyping && (
+                          <Text fontSize="xs" color="purple.300">
+                            Typing <span className="typing-dots">
+                              <span style={{ '--i': 1 }}>.</span>
+                              <span style={{ '--i': 2 }}>.</span>
+                              <span style={{ '--i': 3 }}>.</span>
+                            </span>
+                          </Text>
+                        )}
+                      </VStack>
+                    </HStack>
+                    <VStack align="end" spacing={1}>
+                      {unreadCount > 0 && (
+                        <Badge
+                          bg="emerald.400"
+                          color="gray.900"
+                          rounded="full"
+                          px={2}
+                          py={1}
+                          fontSize="xs"
+                        >
+                          {unreadCount}
+                        </Badge>
+                      )}
+                      <Text
+                        fontSize="xs"
+                        color={isOnline ? 'emerald.300' : 'gray.400'}
+                      >
+                        {isOnline ? 'Online' : lastSeen[conv.username] ? `Last seen ${formatLastSeen(lastSeen[conv.username])}` : ''}
+                      </Text>
+                    </VStack>
+                  </Flex>
+                </MotionBox>
+              );
+            })
+          )}
+        </VStack>
+        <Tooltip label="View Friend Requests" placement="right">
+          <MotionButton
+            onClick={onFriendRequestsOpen}
+            className={currentTheme.button}
+            color="white"
+            fontSize="sm"
+            p={4}
+            rounded="lg"
+            w="full"
+            _hover={{ bg: 'purple.700' }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            aria-label="View friend requests"
+          >
+            Friend Requests {friendRequestCount > 0 && `(${friendRequestCount})`}
+          </MotionButton>
+        </Tooltip>
+        <HStack w="full" justify="space-between">
+          <Tooltip label="Change Theme" placement="right">
+            <Menu>
+              <MenuButton
+                as={IconButton}
+                icon={<FaPalette />}
+                color="whiteAlpha.800"
+                _hover={{ color: 'white' }}
+                variant="ghost"
+                size="sm"
+                aria-label="Change theme"
+              />
+              <MenuList bg="gray.800" color="white" border="none">
+                <MenuItem onClick={() => setTheme('neon')} _hover={{ bg: 'gray.700' }}>
+                  Neon
+                </MenuItem>
+              </MenuList>
+            </Menu>
+          </Tooltip>
+          <Tooltip label="Log Out" placement="right">
+            <IconButton
+              icon={<FaSignOutAlt />}
+              onClick={() => {
+                localStorage.removeItem('token');
+                localStorage.removeItem('username');
+                setToken(null);
+                setCurrentUsername('');
+                if (socketRef.current) socketRef.current.close();
+                toast({ title: 'Logged Out', status: 'info', duration: 2000, isClosable: true });
+              }}
+              color="whiteAlpha.800"
+              _hover={{ color: 'white' }}
+              variant="ghost"
+              size="sm"
+              aria-label="Log out"
+            />
+          </Tooltip>
+        </HStack>
+        <VStack spacing={3} w="full">
+          <Text fontSize="sm" fontWeight="semibold" color="white">Suggested Friends</Text>
+          {suggestedFriends.length > 0 ? (
+            suggestedFriends.map(friend => (
+              <MotionBox
+                key={friend.id}
+                p={3}
+                bg="whiteAlpha.100"
+                rounded="xl"
+                border="1px"
+                borderColor="whiteAlpha.200"
+                w="full"
+                whileHover={{ scale: 1.02 }}
+                transition={{ duration: 0.2 }}
+              >
+                <Flex justify="space-between" align="center">
+                  <Text fontWeight="medium" color="white" fontSize="sm">{friend.username}</Text>
+                  <Tooltip label={`Send friend request to ${friend.username}`} placement="right">
+                    <IconButton
+                      icon={<FaUserPlus />}
+                      onClick={() => sendFriendRequest(friend.username)}
+                      color="whiteAlpha.800"
+                      _hover={{ color: 'white' }}
+                      variant="ghost"
+                      size="sm"
+                      aria-label={`Send friend request to ${friend.username}`}
+                    />
+                  </Tooltip>
+                </Flex>
+              </MotionBox>
+            ))
+          ) : (
+            <Text color="gray.300" fontSize="sm" textAlign="center">No suggestions available</Text>
+          )}
+        </VStack>
+      </VStack>
+    )}
+  </MotionBox>
       )}
       {/* Main Chat Area */}
       <Box
