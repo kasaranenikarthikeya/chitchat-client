@@ -55,7 +55,7 @@ html, body, #root {
 .sidebar-container {
   width: var(--sidebar-width);
   height: 100%;
-  background: var(--bg-secondary);
+  background: var(--bg-secondary, #1e293b); /* Fallback to #1e293b */
   border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
@@ -438,13 +438,14 @@ html, body, #root {
     transform: translateX(-100%);
     width: var(--mobile-sidebar-width);
     max-width: 300px;
+    background: var(--bg-secondary, #1e293b); /* Explicitly set for mobile */
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
   }
 
   .sidebar-container.open {
     transform: translateX(0);
   }
-
+}
   .chat-section {
     width: 100%;
   }
@@ -479,7 +480,6 @@ html, body, #root {
   .message-actions {
     right: -2rem;
   }
-}
 
 /* Tablet Responsiveness */
 @media (min-width: 769px) and (max-width: 1024px) {
