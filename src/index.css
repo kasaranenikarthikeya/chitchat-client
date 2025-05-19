@@ -71,6 +71,11 @@ html, body, #root {
   z-index: 20;
   overflow-y: auto;
   overflow-x: hidden;
+  color: var(--text-secondary, #94a3b8) !important;
+}
+
+.sidebar-container * {
+  color: var(--text-secondary, #94a3b8) !important;
 }
 
 .sidebar-container::-webkit-scrollbar {
@@ -448,6 +453,7 @@ html, body, #root {
     background: #1e293b !important; /* Direct color as ultimate fallback */
     background: var(--bg-secondary, #1e293b) !important; /* Ensure background consistency */
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+    color: var(--text-secondary, #94a3b8) !important;
   }
 
   .sidebar-container.open {
@@ -682,4 +688,24 @@ html, body, #root {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+.sidebar-container .chakra-menu__menu-list,
+.sidebar-container .chakra-tooltip,
+.sidebar-container .chakra-modal__content {
+  background: #1e293b !important;
+  background: var(--bg-secondary, #1e293b) !important;
+  color: var(--text-secondary, #94a3b8) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.sidebar-container .chakra-menu__menuitem {
+  background: #1e293b !important;
+  background: var(--bg-secondary, #1e293b) !important;
+  color: var(--text-secondary, #94a3b8) !important;
+  transition: background 0.2s ease;
+}
+
+.sidebar-container .chakra-menu__menuitem:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
 }
