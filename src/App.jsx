@@ -1468,15 +1468,19 @@ function App() {
     <Drawer isOpen={isDrawerOpen} placement="left" onClose={onDrawerClose}>
       <DrawerOverlay />
       <DrawerContent
-        bg="#1e293b" // Explicit background color
+        bg="#1e293b" // Direct fallback
         className={currentTheme.secondary}
         p={4}
         maxW="80%"
         sx={{
-          background: 'var(--bg-secondary, #1e293b) !important', // Force background
-          color: 'var(--text-primary, #f8fafc)', // Ensure text color
-          '& .chakra-ui-drawer__content': {
-            background: 'var(--bg-secondary, #1e293b) !important', // Override Chakra UI defaults
+          background: '#1e293b !important', // Ultimate fallback
+          background: 'var(--bg-secondary, #1e293b) !important', // Force dark background
+          color: 'var(--text-primary, #f8fafc) !important', // Ensure text visibility
+          // Override all possible Chakra UI classes
+          '&, & .chakra-drawer__content, & [class*="chakra-drawer"], & [data-theme], & div': {
+            background: '#1e293b !important',
+            background: 'var(--bg-secondary, #1e293b) !important',
+            color: 'var(--text-primary, #f8fafc) !important',
           },
         }}
       >
