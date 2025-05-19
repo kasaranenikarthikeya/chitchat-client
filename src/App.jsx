@@ -1172,9 +1172,9 @@ function App() {
         <MenuButton
           as={IconButton}
           icon={<FaLanguage />}
-          size="xs"
+          size="sm"
           variant="ghost"
-          color="whiteAlpha.800"
+          color="var(--text-secondary, #94a3b8)"
           _hover={{ color: 'white' }}
           aria-label="Translate message"
           isLoading={isTranslating}
