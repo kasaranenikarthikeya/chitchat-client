@@ -22,6 +22,12 @@
   --mobile-sidebar-width: 85%;
 }
 
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
 html, body, #root {
   height: 100dvh;
   width: 100vw;
@@ -53,13 +59,14 @@ html, body, #root {
 }
 
 .sidebar-container {
-  width: var(--sidebar-width);
+  width: var(--sidebar-width, 320px); /* Fallback for width */
   height: 100%;
-  background: var(--bg-secondary, #1e293b); /* Fallback to #1e293b */
-  border-right: 1px solid var(--border-color);
+  background: #1e293b !important; /* Direct color as ultimate fallback */
+  background: var(--bg-secondary, #1e293b) !important; /* Use variable with fallback */
+  border-right: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
   display: flex;
   flex-direction: column;
-  transition: transform 0.3s var(--transition-timing);
+  transition: transform 0.3s var(--transition-timing, cubic-bezier(0.4, 0, 0.2, 1));
   position: relative;
   z-index: 20;
   overflow-y: auto;
@@ -436,9 +443,10 @@ html, body, #root {
     top: 0;
     bottom: 0;
     transform: translateX(-100%);
-    width: var(--mobile-sidebar-width);
+    width: var(--mobile-sidebar-width, 85%);
     max-width: 300px;
-    background: var(--bg-secondary, #1e293b); /* Explicitly set for mobile */
+    background: #1e293b !important; /* Direct color as ultimate fallback */
+    background: var(--bg-secondary, #1e293b) !important; /* Ensure background consistency */
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
   }
 
@@ -588,8 +596,8 @@ html, body, #root {
 /* Enhanced Dark Mode Support */
 @media (prefers-color-scheme: dark) {
   body {
-    background: var(--bg-primary);
-    color: var(--text-primary);
+    background: var(--bg-primary, #0f172a);
+    color: var(--text-primary, #f8fafc);
   }
 }
 
@@ -652,7 +660,7 @@ html, body, #root {
   30% { transform: scale(1.5); }
 }
 
-/* Date Header 11 */
+/* Date Header */
 .top-date-header {
   background: rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(8px);
