@@ -93,8 +93,11 @@ function App() {
   const [isDeletingMessage, setIsDeletingMessage] = useState(false);
   const typingTimeoutRef = useRef({});
 
-  const apiUrl = 'http://localhost:8000';
-  const wsUrl = 'ws://localhost:8000/ws';
+  // const apiUrl = 'http://localhost:8000';
+  // const wsUrl = 'ws://localhost:8000/ws';
+
+  const apiUrl = 'https://chitchat-f4e6.onrender.com';
+  const wsUrl = 'ws://chitchat-f4e6.onrender.com/ws';
 
   // Updated theme with enhanced gradients and neumorphic styles
   const themes = {
