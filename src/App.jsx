@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Box, Flex, useDisclosure, IconButton, Drawer, DrawerContent, DrawerOverlay } from '@chakra-ui/react';
 import { HiMenuAlt2 } from 'react-icons/hi';
-import Sidebar from './components/Sidebar';
-import ChatArea from './components/ChatArea';
+import Sidebar from './components/Sidebar.jsx';
+import ChatArea from './components/ChatArea.jsx';
 import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
 
 function App() {
