@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Box, Flex, useDisclosure, IconButton, Drawer, DrawerContent, DrawerOverlay, useToast } from '@chakra-ui/react';
+import { Box, Flex, useDisclosure, IconButton, Drawer, DrawerContent, DrawerOverlay } from '@chakra-ui/react';
 import { HiMenuAlt2 } from 'react-icons/hi';
-import Sidebar from './components/Sidebar.jsx';
-import ChatArea from './components/ChatArea.jsx';
+import Sidebar from './components/Sidebar';
+import ChatArea from './components/ChatArea';
 import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
 
 function App() {
@@ -12,117 +12,33 @@ function App() {
   const [selectedChat, setSelectedChat] = useState(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const btnRef = useRef();
-  const toast = useToast();
-  const reconnectAttempts = useRef(0);
-  const maxReconnectAttempts = 5;
-
-  const createConnection = () => {
-    const hubUrl = process.env.REACT_APP_SIGNALR_URL || 'http://localhost:5000/chat';
-    
-    return new HubConnectionBuilder()
-      .withUrl(hubUrl)
-      .configureLogging(LogLevel.Information)
-      .withAutomaticReconnect([0, 2000, 5000, 10000, null]) // Configures reconnection timing
-      .build();
-  };
-
-  const startConnection = async (conn) => {
-    try {
-      await conn.start();
-      console.log('SignalR Connected!');
-      reconnectAttempts.current = 0;
-      
-      toast({
-        title: "Connected to chat server",
-        status: "success",
-        duration: 3000,
-        isClosable: true,
-      });
-
-      conn.on('ReceiveMessage', (message) => {
-        setMessages((prevMessages) => [...prevMessages, message]);
-      });
-
-    } catch (error) {
-      console.error('Connection failed:', error);
-      reconnectAttempts.current += 1;
-
-      const errorMessage = error.errorType === 'FailedToNegotiateWithServerError'
-        ? 'Unable to connect to chat server. Please check if the server is running.'
-        : 'Connection error. Retrying...';
-
-      toast({
-        title: "Connection Error",
-        description: errorMessage,
-        status: "error",
-        duration: 5000,
-        isClosable: true,
-      });
-
-      // Implement exponential backoff for reconnection
-      if (reconnectAttempts.current < maxReconnectAttempts) {
-        const timeout = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 10000);
-        setTimeout(() => startConnection(conn), timeout);
-      } else {
-        toast({
-          title: "Connection Failed",
-          description: "Maximum reconnection attempts reached. Please refresh the page.",
-          status: "error",
-          duration: null,
-          isClosable: true,
-        });
-      }
-    }
-  };
 
   useEffect(() => {
-    const newConnection = createConnection();
-    setConnection(newConnection);
+    const newConnection = new HubConnectionBuilder()
+      .withUrl('http://localhost:5000/chat')
+      .configureLogging(LogLevel.Information)
+      .build();
 
-    return () => {
-      if (newConnection) {
-        newConnection.stop();
-      }
-    };
+    setConnection(newConnection);
   }, []);
 
   useEffect(() => {
     if (connection) {
-      startConnection(connection);
+      connection
+        .start()
+        .then(() => {
+          console.log('Connected!');
 
-      // Handle reconnection events
-      connection.onreconnecting(() => {
-        toast({
-          title: "Reconnecting...",
-          status: "warning",
-          duration: null,
-          isClosable: true,
-        });
-      });
-
-      connection.onreconnected(() => {
-        toast({
-          title: "Reconnected!",
-          status: "success",
-          duration: 3000,
-          isClosable: true,
-        });
-      });
-
-      connection.onclose(() => {
-        toast({
-          title: "Connection closed",
-          description: "The connection to the chat server was closed.",
-          status: "error",
-          duration: null,
-          isClosable: true,
-        });
-      });
+          connection.on('ReceiveMessage', (message) => {
+            setMessages((prevMessages) => [...prevMessages, message]);
+          });
+        })
+        .catch((error) => console.log('Connection failed: ', error));
     }
-  }, [connection, toast]);
+  }, [connection]);
 
   const sendMessage = async (messageContent) => {
-    if (connection?.state === 'Connected' && messageContent && selectedChat) {
+    if (connection && messageContent && selectedChat) {
       try {
         await connection.invoke('SendMessage', {
           content: messageContent,
@@ -130,14 +46,7 @@ function App() {
           senderId: currentUser.id,
         });
       } catch (error) {
-        console.error('Error sending message:', error);
-        toast({
-          title: "Failed to send message",
-          description: "Please check your connection and try again.",
-          status: "error",
-          duration: 5000,
-          isClosable: true,
-        });
+        console.log('Error sending message: ', error);
       }
     }
   };
