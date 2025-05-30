@@ -15,8 +15,9 @@ function App() {
 
   useEffect(() => {
     const newConnection = new HubConnectionBuilder()
-      .withUrl('http://localhost:5000/chat')
+      .withUrl('https://localhost:5000/chat')
       .configureLogging(LogLevel.Information)
+      .withAutomaticReconnect()  // Add automatic reconnection
       .build();
 
     setConnection(newConnection);
@@ -33,7 +34,13 @@ function App() {
             setMessages((prevMessages) => [...prevMessages, message]);
           });
         })
-        .catch((error) => console.log('Connection failed: ', error));
+        .catch((error) => {
+          console.log('Connection failed: ', error);
+          // Add more detailed error logging
+          if (error.errorType === 'FailedToNegotiateWithServerError') {
+            console.log('Server negotiation failed. Please check if the backend server is running and CORS is properly configured.');
+          }
+        });
     }
   }, [connection]);
 
