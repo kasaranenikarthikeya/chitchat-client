@@ -17,7 +17,7 @@ function App() {
   const maxReconnectAttempts = 5;
 
   const createConnection = () => {
-    const hubUrl = process.env.REACT_APP_SIGNALR_URL || 'https://localhost:5000/chat';
+    const hubUrl = process.env.REACT_APP_SIGNALR_URL || 'http://localhost:5000/chat';
     
     return new HubConnectionBuilder()
       .withUrl(hubUrl)
