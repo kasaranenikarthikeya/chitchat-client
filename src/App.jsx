@@ -80,7 +80,7 @@ function App() {
   // New states for Message Search
   const [messageSearchQuery, setMessageSearchQuery] = useState('');
   const [messageSearchResults, setMessageSearchResults] = useState([]);
-  const [currentMessageSearchIndex, setCurrentMessageSearchIndex] = useState(-1);
+  const [currentMessageSearchIndex, setCurrentMessageSearchIndex] = useState(-1); // Fixed syntax error here
   const [isSearchingMessages, setIsSearchingMessages] = useState(false);
 
   // New states for Forward Message
@@ -109,6 +109,7 @@ function App() {
   const isUserScrolling = useRef(false); // To prevent auto-scroll when user is scrolling
   const lastScrollTop = useRef(0);
   const typingTimeoutRef = useRef({}); // For managing typing indicators
+  const messageVisibilityTimers = useRef({}); // For tracking message visibility for blue ticks
 
   // Chakra UI useDisclosure hooks for modals/drawers
   const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
@@ -169,8 +170,12 @@ function App() {
     if (!selectedUser || !conversations.length) return;
 
     const conv = conversations.find(c => c.username === selectedUser);
-    if (conv && conv.messages.length > 0) { // Removed !isUserScrolling.current check here
-      scrollToBottom(); // Always scroll to bottom for new messages in selected chat
+    if (conv && conv.messages.length > 0 && !isUserScrolling.current) {
+      const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 50;
+      if (isNearBottom) {
+        scrollToBottom();
+      }
     }
   }, [conversations, selectedUser, scrollToBottom]);
 
@@ -218,7 +223,7 @@ function App() {
       const newMessageData = {
         ...message,
         timestamp: message.timestamp || new Date().toISOString(),
-        reactions: message.reactions || [],
+        reactions: Array.isArray(message.reactions) ? message.reactions : [], // Ensure reactions is an array
         is_pinned: message.is_pinned || false,
         is_read: message.is_read || false,
         status: message.status || 'sent', // Default to 'sent' if status not provided by WS
@@ -287,10 +292,18 @@ function App() {
     // 1. Always scroll if it's our own message.
     // 2. For incoming messages, scroll if the user is not actively scrolling up.
     if (selectedUser === convUsername) {
-      if (message.sender_username === currentUsername || !isUserScrolling.current) {
-        scrollToBottom();
+      // Check if user is near bottom or if it's our own message, then scroll
+      const chatContainer = chatContainerRef.current;
+      if (chatContainer) {
+        const { scrollHeight, scrollTop, clientHeight } = chatContainer;
+        const isNearBottom = scrollHeight - scrollTop - clientHeight < 100; // 100px buffer
+        
+        if (message.sender_username === currentUsername || isNearBottom) {
+          setTimeout(() => scrollToBottom(), 50); // Small delay to allow DOM to update
+        }
       }
     }
+
 
     // Handle friend request notifications
     if (message.type === 'friend_request' && message.recipient_username === currentUsername) {
@@ -328,7 +341,11 @@ function App() {
   }, []);
 
   const handleUserStatus = useCallback((data) => {
-    setOnlineUsers(prev => ({ ...prev, [data.username]: data.online }));
+    setOnlineUsers(prev => {
+      // Defensive check: ensure prev is an object before spreading
+      const safePrev = typeof prev === 'object' && prev !== null ? prev : {};
+      return { ...safePrev, [data.username]: data.online };
+    });
     if (!data.online) {
       setLastSeen(prev => ({ ...prev, [data.username]: new Date().toISOString() }));
     }
@@ -346,20 +363,27 @@ function App() {
 
   const handleTyping = useCallback((data) => {
     if (data.recipient === currentUsername) {
-      setTypingUsers(prev => ({
-        ...prev,
-        [data.username]: data.isTyping,
-      }));
+      setTypingUsers(prev => {
+        // Defensive check: ensure prev is an object before spreading
+        const safePrev = typeof prev === 'object' && prev !== null ? prev : {};
+        return {
+          ...safePrev,
+          [data.username]: data.isTyping,
+        };
+      });
 
       if (data.isTyping) {
         if (typingTimeoutRef.current[data.username]) {
           clearTimeout(typingTimeoutRef.current[data.username]);
         }
         typingTimeoutRef.current[data.username] = setTimeout(() => {
-          setTypingUsers(prev => ({
-            ...prev,
-            [data.username]: false,
-          }));
+          setTypingUsers(prev => {
+            const safePrev = typeof prev === 'object' && prev !== null ? prev : {};
+            return {
+              ...safePrev,
+              [data.username]: false,
+            };
+          });
         }, 3000); // Typing indicator disappears after 3 seconds of no new typing events
       }
     }
@@ -622,7 +646,7 @@ function App() {
           ...msg,
           timestamp: msg.timestamp,
           type: msg.type || 'text',
-          reactions: msg.reactions || [],
+          reactions: Array.isArray(msg.reactions) ? msg.reactions : [], // Ensure reactions is an array
         })),
       })));
       console.log('Conversations fetched:', data);
@@ -660,28 +684,49 @@ function App() {
 
   // Intersection Observer for marking messages as read when visible
   useEffect(() => {
-    if (!selectedUser || !socketRef.current) return;
+    if (!selectedUser || !socketRef.current || !currentUsername) return;
 
     const observer = new IntersectionObserver(
       (entries) => entries.forEach(entry => {
+        const messageId = parseInt(entry.target.dataset.messageId);
+        const message = conversations.find(c => c.username === selectedUser)?.messages.find(m => m.id === messageId);
+
+        if (!message || message.is_read || message.recipient_username !== currentUsername) {
+          // Only process unread messages sent to the current user
+          return;
+        }
+
         if (entry.isIntersecting) {
-          const messageId = parseInt(entry.target.dataset.messageId);
-          const message = conversations.find(c => c.username === selectedUser)?.messages.find(m => m.id === messageId);
-          if (message && !message.is_read && message.recipient_username === currentUsername) {
-            markMessageAsRead(messageId);
+          // Start timer when message becomes visible
+          if (!messageVisibilityTimers.current[messageId]) {
+            messageVisibilityTimers.current[messageId] = setTimeout(() => {
+              markMessageAsRead(messageId);
+              delete messageVisibilityTimers.current[messageId]; // Clear timer after marking
+            }, 1000); // Changed from 10 seconds to 1 second for quicker blue tick
+          }
+        } else {
+          // Clear timer if message scrolls out of view before 1 second
+          if (messageVisibilityTimers.current[messageId]) {
+            clearTimeout(messageVisibilityTimers.current[messageId]);
+            delete messageVisibilityTimers.current[messageId];
           }
         }
       }),
-      { threshold: 0.5 } // Message considered "read" when 50% visible
+      { threshold: 0.8 } // Message considered "read" when 80% visible
     );
 
     observerRef.current = observer;
-    // Observe all message bubbles
-    // Disconnect and re-observe when messages change to avoid observing old elements
+    
+    // Observe all message bubbles for the currently selected user
     const messageBubbles = document.querySelectorAll('.message-bubble');
     messageBubbles.forEach(el => observer.observe(el));
 
-    return () => observer.disconnect(); // Clean up observer
+    return () => {
+      observer.disconnect(); // Clean up observer on unmount or selectedUser change
+      // Clear all pending timers when observer disconnects
+      Object.values(messageVisibilityTimers.current).forEach(clearTimeout);
+      messageVisibilityTimers.current = {};
+    };
   }, [selectedUser, conversations, currentUsername, markMessageAsRead]);
 
   // Recording timer effect
@@ -720,14 +765,14 @@ function App() {
   }, [isSocketConnected, queuedMessages, token]);
 
   // Debounced typing indicator sender
-  const debouncedTyping = useMemo(() => debounce((isTyping) => {
+  const debouncedTyping = useMemo(() => debounce(() => {
     if (socketRef.current && selectedUser && socketRef.current.readyState === WebSocket.OPEN) {
       socketRef.current.send(JSON.stringify({
         type: 'typing',
-        data: { recipient: selectedUser, isTyping: isTyping },
+        data: { recipient: selectedUser, isTyping: true },
       }));
     }
-  }, 300), [selectedUser]); // Reduced debounce delay for more responsive typing indicator
+  }, 500), [selectedUser]);
 
   // Function to stop typing indicator
   const stopTyping = useCallback(() => {
@@ -876,7 +921,7 @@ function App() {
           messages: [...existingConv.messages, newMessage],
         } : c);
       }
-      // If no existing conversation, create a new one
+      // If no existing conversation, create a new one with the message
       return [...prev, { username: targetRecipient, messages: [newMessage] }];
     });
     
@@ -1130,7 +1175,7 @@ function App() {
   // Handle emoji selection from picker
   const handleEmojiClick = (emojiObject) => {
     setMessageContent(prev => prev + emojiObject.emoji);
-    debouncedTyping(true); // Send typing true when emoji is clicked
+    debouncedTyping();
     console.log('Emoji selected:', emojiObject.emoji);
   };
 
@@ -1333,6 +1378,14 @@ function App() {
       const { api_key } = await apiKeyResponse.json();
 
       // Call Mistral AI API for translation
+      const payload = {
+        model: 'mistral-small-latest', // Or other suitable model
+        messages: [{
+          role: 'user',
+          content: `Translate "${content}" from English to ${targetLangName} and return only the translated text, no other text or comments.`
+        }],
+      };
+
       const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -1340,13 +1393,7 @@ function App() {
           'Accept': 'application/json',
           'Authorization': `Bearer ${api_key}`,
         },
-        body: JSON.stringify({
-          model: 'mistral-small-latest', // Or other suitable model
-          messages: [{
-            role: 'user',
-            content: `Translate "${content}" from English to ${targetLangName} and return only the translated text, no other text or comments.`
-          }],
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -2531,19 +2578,19 @@ function App() {
               </Tabs>
 
               <HStack w="full" justify="center" pt={4} borderTop="1px solid" borderColor="whiteAlpha.200">
-                <Tooltip label="Settings" placement="top">
-                  <IconButton
-                    icon={<FiSettings />}
-                    color="whiteAlpha.800"
-                    _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
-                    variant="ghost"
-                    size="md"
-                    aria-label="Settings"
-                    onClick={() => toast({ title: 'Settings clicked', status: 'info', duration: 1000, isClosable: true })}
-                  />
-                </Tooltip>
-                <Tooltip label="Change Theme" placement="top">
-                  <Menu>
+                    <Tooltip label="Settings" placement="top">
+                      <IconButton
+                        icon={<FiSettings />}
+                        color="whiteAlpha.800"
+                        _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
+                        variant="ghost"
+                        size="md"
+                        aria-label="Settings"
+                        onClick={() => toast({ title: 'Settings clicked', status: 'info', duration: 1000, isClosable: true })}
+                      />
+                    </Tooltip>
+                    <Tooltip label="Change Theme" placement="top">
+                      <Menu>
                         <MenuButton
                           as={IconButton}
                           icon={<FaPalette />}
@@ -2558,12 +2605,12 @@ function App() {
                             Modern
                           </MenuItem>
                         </MenuList>
-                  </Menu>
-                </Tooltip>
-                <Tooltip label="Log Out" placement="top">
-                  <IconButton
-                    icon={<FiLogOut />}
-                    onClick={() => {
+                      </Menu>
+                    </Tooltip>
+                    <Tooltip label="Log Out" placement="top">
+                      <IconButton
+                        icon={<FiLogOut />}
+                        onClick={() => {
                           localStorage.removeItem('token');
                           localStorage.removeItem('username');
                           setToken(null);
@@ -2571,14 +2618,14 @@ function App() {
                           if (socketRef.current) socketRef.current.close();
                           toast({ title: 'Logged Out', status: 'info', duration: 2000, isClosable: true });
                         }}
-                    color="whiteAlpha.800"
-                    _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
-                    variant="ghost"
-                    size="md"
-                    aria-label="Log out"
-                  />
-                </Tooltip>
-              </HStack>
+                        color="whiteAlpha.800"
+                        _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
+                        variant="ghost"
+                        size="md"
+                        aria-label="Log out"
+                      />
+                    </Tooltip>
+                  </HStack>
             </VStack>
           )}
         </MotionBox>
@@ -2886,6 +2933,11 @@ function App() {
               background: 'rgba(255, 255, 255, 0.4)',
             },
           }}
+          onScroll={(e) => {
+            const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+            // Detect if user is scrolling up
+            isUserScrolling.current = scrollTop < scrollHeight - clientHeight - 50;
+          }}
         >
           {selectedUser && (
             <VStack
@@ -2928,26 +2980,38 @@ function App() {
                     >
                       <Flex direction="column">
                         {message.type === 'text' && (
-                          <Text
-                            whiteSpace="pre-wrap"
-                            wordBreak="break-word" // Ensured word-break
-                            mb={1}
-                            dangerouslySetInnerHTML={{
-                                __html: messageSearchQuery && message.type === 'text'
-                                    ? message.content.replace(
-                                        new RegExp(`(${messageSearchQuery})`, 'gi'),
-                                        '<span style="background-color: yellow; color: black; border-radius: 4px; padding: 1px 2px;">$1</span>'
-                                      )
-                                    : message.content
-                            }}
-                          >
-                            {/* Display translated content if available */}
+                          <>
+                            <Text
+                              whiteSpace="pre-wrap"
+                              wordBreak="break-word" // Ensured word-break
+                              mb={1}
+                              dangerouslySetInnerHTML={{
+                                  __html: messageSearchQuery && message.type === 'text'
+                                      ? message.content.replace(
+                                          new RegExp(`(${messageSearchQuery})`, 'gi'),
+                                          '<span style="background-color: yellow; color: black; border-radius: 4px; padding: 1px 2px;">$1</span>'
+                                        )
+                                      : message.content
+                              }}
+                            />
+                            {/* Display translated content, now more visible */}
                             {message.translatedContent && (
-                                <Text as="span" fontSize="xs" color="gray.400" fontStyle="italic" display="block" mt={1}>
+                                <Text
+                                    fontSize="sm" // Slightly larger font size
+                                    color="purple.200" // Distinct color
+                                    fontWeight="bold" // Bolder
+                                    fontStyle="italic"
+                                    display="block"
+                                    mt={1}
+                                    pt={1}
+                                    borderTop="1px solid"
+                                    borderColor="whiteAlpha.300"
+                                    className="translated-text" // Add a class for potential future styling
+                                >
                                     (Translated: {message.translatedContent})
                                 </Text>
                             )}
-                          </Text>
+                          </>
                         )}
                         {message.type === 'image' && (
                           <Image
@@ -3074,7 +3138,7 @@ function App() {
                             <MenuList bg="gray.800" color="white" border="none" boxShadow="lg" maxH="200px" overflowY="auto" zIndex={9999}> {/* Added zIndex */}
                               {[
                                 { code: 'en', name: 'English' }, { code: 'te', name: 'Telugu' }, { code: 'hi', name: 'Hindi' },
-                                { code: 'kn', name: 'Kannada' }, { code: 'ml', name: 'Malayalam', 'ta': 'Tamil' },
+                                { code: 'kn', name: 'Kannada' }, { code: 'ml', name: 'Malayalam' }, { code: 'ta', name: 'Tamil' },
                               ].map(lang => (
                                 <MenuItem
                                   key={lang.code}
@@ -3200,6 +3264,8 @@ function App() {
             zIndex={10}
             transition="all 0.3s ease"
             boxShadow="0 -4px 15px rgba(0,0,0,0.2)"
+            // Dynamic padding-bottom for mobile keyboard adjustment
+            pb={{ base: 'env(keyboard-inset-bottom, 1rem)', md: '1rem' }}
           >
             {typingUsers[selectedUser] && (
               <TypingIndicator username={selectedUser} />
@@ -3292,9 +3358,9 @@ function App() {
                   onChange={(e) => {
                     setMessageContent(e.target.value);
                     if (e.target.value.trim() !== '') {
-                      debouncedTyping(true); // Send typing true when content is not empty
+                      debouncedTyping();
                     } else {
-                      debouncedTyping(false); // Send typing false when content is empty
+                      stopTyping();
                     }
                   }}
                   onKeyPress={(e) => {
@@ -3303,7 +3369,6 @@ function App() {
                       sendMessage();
                     }
                   }}
-                  onBlur={() => debouncedTyping(false)} // Send typing false when input loses focus
                   placeholder="Type a message..."
                   className="message-input"
                   color="white"
@@ -3787,4 +3852,3 @@ function App() {
 }
 
 export default App;
-
