@@ -357,6 +357,17 @@
   100% { background-position: 200% 0; }
 }
 
+/* Highlight for message search results */
+.highlight-search-result {
+  animation: highlightPulse 1.5s ease-out;
+}
+
+@keyframes highlightPulse {
+  0% { box-shadow: 0 0 0 0px rgba(139, 92, 246, 0.7); }
+  50% { box-shadow: 0 0 0 8px rgba(139, 92, 246, 0); }
+  100% { box-shadow: 0 0 0 0px rgba(139, 92, 246, 0); }
+}
+
 /* Responsive styles */
 @media (max-width: 768px) {
   .sidebar-container {
@@ -386,7 +397,10 @@
 
   .chat-container {
     padding: 0.75rem;
-    padding-bottom: calc(var(--container-padding) + 80px); /* Adjust for fixed input */
+    /* Adjust padding-bottom dynamically for mobile keyboard.
+       env(keyboard-inset-bottom) is a CSS environment variable
+       that gives the size of the virtual keyboard. */
+    padding-bottom: calc(var(--container-padding) + 80px + env(keyboard-inset-bottom, 0px));
   }
 
   .message-bubble {
@@ -398,6 +412,8 @@
     left: 0; /* Full width on mobile */
     right: 0;
     padding: 0.75rem;
+    /* Use env(keyboard-inset-bottom) for mobile keyboard adjustment */
+    padding-bottom: calc(0.75rem + env(keyboard-inset-bottom, 0px));
   }
 }
 
@@ -547,3 +563,4 @@
   50% { box-shadow: 0 0 0 8px rgba(139, 92, 246, 0); }
   100% { box-shadow: 0 0 0 0px rgba(139, 92, 246, 0); }
 }
+
