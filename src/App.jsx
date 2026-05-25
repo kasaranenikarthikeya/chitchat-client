@@ -19,66 +19,66 @@ const MotionBox = motion(Box);
 
 // ─── API / WS base URLs ───────────────────────────────────────────────────────
 const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-const apiUrl = isLocal ? 'http://localhost:8000' : 'https://chitchat-f4e6.onrender.com';
-const wsUrl  = isLocal ? 'ws://localhost:8000/ws' : 'wss://chitchat-f4e6.onrender.com/ws';
+const apiUrl = isLocal ? 'http://localhost:8000' : 'http://13.48.46.222';
+const wsUrl = isLocal ? 'ws://localhost:8000/ws' : 'ws://13.48.46.222/ws';
 
 // ─── App ─────────────────────────────────────────────────────────────────────
 function App() {
   // ── Auth ────────────────────────────────────────────────────────────────────
-  const [token, setToken]                   = useState(localStorage.getItem('token'));
-  const [username, setUsername]             = useState('');
-  const [password, setPassword]             = useState('');
-  const [showPassword, setShowPassword]     = useState(false);
-  const [isRegistering, setIsRegistering]   = useState(false);
+  const [token, setToken] = useState(localStorage.getItem('token'));
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
   const [currentUsername, setCurrentUsername] = useState(localStorage.getItem('username') || '');
 
   // ── Data ────────────────────────────────────────────────────────────────────
-  const [searchQuery, setSearchQuery]             = useState('');
-  const [users, setUsers]                         = useState([]);
-  const [conversations, setConversations]         = useState([]);
-  const [friendRequests, setFriendRequests]       = useState([]);
-  const [suggestedFriends, setSuggestedFriends]   = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [users, setUsers] = useState([]);
+  const [conversations, setConversations] = useState([]);
+  const [friendRequests, setFriendRequests] = useState([]);
+  const [suggestedFriends, setSuggestedFriends] = useState([]);
   const [friendRequestCount, setFriendRequestCount] = useState(0);
-  const [selectedUser, setSelectedUser]           = useState(null);
-  const [messageContent, setMessageContent]       = useState('');
-  const [editingMessage, setEditingMessage]       = useState(null);
-  const [pinnedMessages, setPinnedMessages]       = useState([]);
-  const [queuedMessages, setQueuedMessages]       = useState([]);
-  const [onlineUsers, setOnlineUsers]             = useState({});
-  const [typingUsers, setTypingUsers]             = useState({});
-  const [lastSeen, setLastSeen]                   = useState({});
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [messageContent, setMessageContent] = useState('');
+  const [editingMessage, setEditingMessage] = useState(null);
+  const [pinnedMessages, setPinnedMessages] = useState([]);
+  const [queuedMessages, setQueuedMessages] = useState([]);
+  const [onlineUsers, setOnlineUsers] = useState({});
+  const [typingUsers, setTypingUsers] = useState({});
+  const [lastSeen, setLastSeen] = useState({});
 
   // ── UI ──────────────────────────────────────────────────────────────────────
-  const [isLoading, setIsLoading]                 = useState(false);
-  const [isInitialLoad, setIsInitialLoad]         = useState(true);
-  const [showDeleteModal, setShowDeleteModal]     = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [showDeleteModal, setShowDeleteModal] = useState(null);
   const [showDeleteConversationModal, setShowDeleteConversationModal] = useState(null);
-  const [expandedImage, setExpandedImage]         = useState(null);
-  const [isRecording, setIsRecording]             = useState(false);
-  const [audioBlob, setAudioBlob]                 = useState(null);
-  const [recordingTime, setRecordingTime]         = useState(0);
-  const [playingAudio, setPlayingAudio]           = useState(null);
-  const [isMobile]                                = useMediaQuery('(max-width: 768px)');
-  const [isSidebarOpen, setIsSidebarOpen]         = useState(!isMobile);
-  const [sidebarWidth, setSidebarWidth]           = useState(
+  const [expandedImage, setExpandedImage] = useState(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [audioBlob, setAudioBlob] = useState(null);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [playingAudio, setPlayingAudio] = useState(null);
+  const [isMobile] = useMediaQuery('(max-width: 768px)');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(!isMobile);
+  const [sidebarWidth, setSidebarWidth] = useState(
     localStorage.getItem('sidebarWidth') ? parseInt(localStorage.getItem('sidebarWidth'), 10) : 350
   );
-  const [theme, setTheme]                         = useState(localStorage.getItem('theme') || 'modern');
-  const [showQuickEmojis, setShowQuickEmojis]     = useState(null);
-  const [isTranslating, setIsTranslating]         = useState(false);
+  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'modern');
+  const [showQuickEmojis, setShowQuickEmojis] = useState(null);
+  const [isTranslating, setIsTranslating] = useState(false);
   const [isDeletingMessage, setIsDeletingMessage] = useState(false);
   const [isSocketConnected, setIsSocketConnected] = useState(false);
-  const [isMuted, setIsMuted]                     = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
 
   // ── Message search ───────────────────────────────────────────────────────────
-  const [messageSearchQuery, setMessageSearchQuery]             = useState('');
-  const [messageSearchResults, setMessageSearchResults]         = useState([]);
+  const [messageSearchQuery, setMessageSearchQuery] = useState('');
+  const [messageSearchResults, setMessageSearchResults] = useState([]);
   const [currentMessageSearchIndex, setCurrentMessageSearchIndex] = useState(-1);
-  const [isSearchingMessages, setIsSearchingMessages]           = useState(false);
+  const [isSearchingMessages, setIsSearchingMessages] = useState(false);
 
   // ── Forward message ──────────────────────────────────────────────────────────
-  const [messageToForward, setMessageToForward]                         = useState(null);
-  const [forwardRecipientSearchQuery, setForwardRecipientSearchQuery]   = useState('');
+  const [messageToForward, setMessageToForward] = useState(null);
+  const [forwardRecipientSearchQuery, setForwardRecipientSearchQuery] = useState('');
   const [forwardRecipientSearchResults, setForwardRecipientSearchResults] = useState([]);
 
   // ── Constants ────────────────────────────────────────────────────────────────
@@ -101,34 +101,34 @@ function App() {
   }, [theme]);
 
   // Refs 
-  const messagesEndRef          = useRef(null);
-  const socketRef               = useRef(null);
-  const observerRef             = useRef(null);
-  const chatContainerRef        = useRef(null);
-  const fileInputRef            = useRef(null);
-  const mediaRecorderRef        = useRef(null);
-  const audioChunksRef          = useRef([]);
-  const recordingTimerRef       = useRef(null);
-  const audioRefs               = useRef({});
-  const sidebarRef              = useRef(null);
-  const resizeRef               = useRef(null);
-  const headerRef               = useRef(null);
-  const isUserScrolling         = useRef(false);
-  const lastScrollTop           = useRef(0);
-  const typingTimeoutRef        = useRef({});
+  const messagesEndRef = useRef(null);
+  const socketRef = useRef(null);
+  const observerRef = useRef(null);
+  const chatContainerRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const recordingTimerRef = useRef(null);
+  const audioRefs = useRef({});
+  const sidebarRef = useRef(null);
+  const resizeRef = useRef(null);
+  const headerRef = useRef(null);
+  const isUserScrolling = useRef(false);
+  const lastScrollTop = useRef(0);
+  const typingTimeoutRef = useRef({});
   const messageVisibilityTimers = useRef({});
-  const wsHandlersRef           = useRef({});
+  const wsHandlersRef = useRef({});
 
   const toast = useToast();
 
   // Disclosure hooks 
-  const { isOpen: isDeleteOpen,        onOpen: onDeleteOpen,        onClose: onDeleteClose        } = useDisclosure();
-  const { isOpen: isConvDeleteOpen,                                 onClose: onConvDeleteClose     } = useDisclosure();
-  const { isOpen: isImageOpen,         onOpen: onImageOpen,         onClose: onImageClose          } = useDisclosure();
-  const { isOpen: isFriendRequestsOpen,                             onClose: onFriendRequestsClose } = useDisclosure();
-  const { isOpen: isForwardModalOpen,  onOpen: onForwardModalOpen,  onClose: onForwardModalClose   } = useDisclosure();
-  const { isOpen: isGroupChatModalOpen,onOpen: onGroupChatModalOpen,onClose: onGroupChatModalClose } = useDisclosure();
-  const { isOpen: isDrawerOpen,        onOpen: onDrawerOpen,        onClose: onDrawerClose         } = useDisclosure();
+  const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
+  const { isOpen: isConvDeleteOpen, onClose: onConvDeleteClose } = useDisclosure();
+  const { isOpen: isImageOpen, onOpen: onImageOpen, onClose: onImageClose } = useDisclosure();
+  const { isOpen: isFriendRequestsOpen, onClose: onFriendRequestsClose } = useDisclosure();
+  const { isOpen: isForwardModalOpen, onOpen: onForwardModalOpen, onClose: onForwardModalClose } = useDisclosure();
+  const { isOpen: isGroupChatModalOpen, onOpen: onGroupChatModalOpen, onClose: onGroupChatModalClose } = useDisclosure();
+  const { isOpen: isDrawerOpen, onOpen: onDrawerOpen, onClose: onDrawerClose } = useDisclosure();
   const [activeTab, setActiveTab] = useState('chats');
 
   // Scroll helper 
@@ -149,20 +149,20 @@ function App() {
 
   useEffect(() => {
     isUserScrolling.current = false;
-    lastScrollTop.current   = 0;
+    lastScrollTop.current = 0;
   }, [selectedUser]);
 
   // ── Fetch friend requests ─────────────────────────────────────────────────────
   const fetchFriendRequests = useCallback(async () => {
     if (!token) return;
     try {
-      const reqRes  = await fetch(`${apiUrl}/friend-requests`, { headers: { Authorization: `Bearer ${token}` } });
+      const reqRes = await fetch(`${apiUrl}/friend-requests`, { headers: { Authorization: `Bearer ${token}` } });
       const reqData = await reqRes.json();
       if (!reqRes.ok) throw new Error(reqData.detail || 'Failed to fetch friend requests');
       setFriendRequests(reqData);
       setFriendRequestCount(reqData.filter(r => r.status === 'pending' && r.recipient_username === currentUsername).length);
 
-      const sugRes  = await fetch(`${apiUrl}/users/suggestions`, { headers: { Authorization: `Bearer ${token}` } });
+      const sugRes = await fetch(`${apiUrl}/users/suggestions`, { headers: { Authorization: `Bearer ${token}` } });
       const sugData = await sugRes.json();
       setSuggestedFriends(sugRes.ok ? sugData.slice(0, 5) : []);
     } catch (e) {
@@ -190,8 +190,8 @@ function App() {
         timestamp: message.timestamp || new Date().toISOString(),
         reactions: Array.isArray(message.reactions) ? message.reactions : [],
         is_pinned: message.is_pinned || false,
-        is_read:   message.is_read   || false,
-        status:    message.status    || 'sent',
+        is_read: message.is_read || false,
+        status: message.status || 'sent',
       };
 
       if (idx !== -1) {
@@ -243,19 +243,19 @@ function App() {
     }
   }, [currentUsername, fetchFriendRequests, toast, selectedUser, scrollToBottom]);
 
-  const handleMessageRead    = useCallback((messageId) => {
+  const handleMessageRead = useCallback((messageId) => {
     setConversations(prev => prev.map(c => ({ ...c, messages: c.messages.map(m => m.id === messageId ? { ...m, is_read: true } : m) })));
   }, []);
 
-  const handleMessageEdit    = useCallback((message) => {
+  const handleMessageEdit = useCallback((message) => {
     setConversations(prev => prev.map(c => ({ ...c, messages: c.messages.map(m => m.id === message.id ? { ...m, content: message.content } : m) })));
   }, []);
 
-  const handleMessageDelete  = useCallback((messageId) => {
+  const handleMessageDelete = useCallback((messageId) => {
     setConversations(prev => prev.map(c => ({ ...c, messages: c.messages.filter(m => m.id !== messageId) })));
   }, []);
 
-  const handleUserStatus     = useCallback((data) => {
+  const handleUserStatus = useCallback((data) => {
     setOnlineUsers(prev => ({ ...(prev || {}), [data.username]: data.online }));
     if (!data.online) setLastSeen(prev => ({ ...prev, [data.username]: new Date().toISOString() }));
   }, []);
@@ -269,7 +269,7 @@ function App() {
     fetchFriendRequests();
   }, [toast, fetchFriendRequests]);
 
-  const handleTyping         = useCallback((data) => {
+  const handleTyping = useCallback((data) => {
     if (data.recipient !== currentUsername) return;
     setTypingUsers(prev => ({ ...(prev || {}), [data.username]: data.isTyping }));
     if (data.isTyping) {
@@ -280,13 +280,13 @@ function App() {
     }
   }, [currentUsername]);
 
-  const handleReaction       = useCallback((data) => {
+  const handleReaction = useCallback((data) => {
     setConversations(prev => prev.map(c => ({
       ...c, messages: c.messages.map(m => m.id === data.message_id ? { ...m, reactions: data.reactions } : m),
     })));
   }, []);
 
-  const handlePinned         = useCallback((data) => {
+  const handlePinned = useCallback((data) => {
     setConversations(prev => prev.map(c => ({
       ...c, messages: c.messages.map(m => m.id === data.message_id ? { ...m, is_pinned: data.pinned } : m),
     })));
@@ -298,23 +298,23 @@ function App() {
     }
   }, [conversations, selectedUser]);
 
-  const handlePing           = useCallback(() => {}, []);
+  const handlePing = useCallback(() => { }, []);
 
 
   // Keep wsHandlersRef up to date
   useEffect(() => {
     wsHandlersRef.current = {
-      new_message:      handleNewMessage,
-      message:          handleNewMessage,
-      read:             handleMessageRead,
-      edit:             handleMessageEdit,
-      delete:           handleMessageDelete,
-      status:           handleUserStatus,
-      friend_accepted:  handleFriendAccepted,
-      typing:           handleTyping,
-      reaction:         handleReaction,
-      pinned:           handlePinned,
-      ping:             handlePing,
+      new_message: handleNewMessage,
+      message: handleNewMessage,
+      read: handleMessageRead,
+      edit: handleMessageEdit,
+      delete: handleMessageDelete,
+      status: handleUserStatus,
+      friend_accepted: handleFriendAccepted,
+      typing: handleTyping,
+      reaction: handleReaction,
+      pinned: handlePinned,
+      ping: handlePing,
     };
   }, [
     handleNewMessage, handleMessageRead, handleMessageEdit, handleMessageDelete,
@@ -339,8 +339,8 @@ function App() {
     if (socketRef.current?.readyState === WebSocket.OPEN) return;
 
     let reconnectAttempts = 0;
-    const maxAttempts     = 5;
-    const maxDelay        = 30000;
+    const maxAttempts = 5;
+    const maxDelay = 30000;
 
     const attemptReconnect = () => {
       if (reconnectAttempts >= maxAttempts) {
@@ -386,7 +386,7 @@ function App() {
     if (!token || currentUsername) return;
     setIsLoading(true);
     try {
-      const res  = await fetch(`${apiUrl}/users/me`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${apiUrl}/users/me`, { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Failed to fetch user');
       localStorage.setItem('username', data.username);
@@ -409,7 +409,7 @@ function App() {
     if (!token) return;
     setIsLoading(true);
     try {
-      const res  = await fetch(`${apiUrl}/messages`, {
+      const res = await fetch(`${apiUrl}/messages`, {
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       });
       const data = await res.json();
@@ -418,7 +418,7 @@ function App() {
         username: conv.username,
         messages: conv.messages.map(msg => ({
           ...msg,
-          type:      msg.type      || 'text',
+          type: msg.type || 'text',
           reactions: Array.isArray(msg.reactions) ? msg.reactions : [],
         })),
       })));
@@ -577,7 +577,7 @@ function App() {
     const endpoint = isRegistering ? '/register' : '/login';
     setIsLoading(true);
     try {
-      const res  = await fetch(`${apiUrl}${endpoint}`, {
+      const res = await fetch(`${apiUrl}${endpoint}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
       });
@@ -605,7 +605,7 @@ function App() {
   const searchUsers = async () => {
     setIsLoading(true);
     try {
-      const res  = await fetch(`${apiUrl}/users?search=${searchQuery}`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${apiUrl}/users?search=${searchQuery}`, { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Failed to search users');
       setUsers(data);
@@ -619,7 +619,7 @@ function App() {
   const sendFriendRequest = async (recipientUsername) => {
     setIsLoading(true);
     try {
-      const res  = await fetch(`${apiUrl}/friend-request`, {
+      const res = await fetch(`${apiUrl}/friend-request`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ recipient_username: recipientUsername }),
       });
@@ -637,7 +637,7 @@ function App() {
   const respondFriendRequest = async (requestId, accept) => {
     setIsLoading(true);
     try {
-      const res  = await fetch(`${apiUrl}/friend-request/respond`, {
+      const res = await fetch(`${apiUrl}/friend-request/respond`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ request_id: requestId, accept }),
       });
@@ -779,7 +779,7 @@ function App() {
       return;
     }
     const reader = new FileReader();
-    reader.onload  = () => sendMessage(reader.result, 'image');
+    reader.onload = () => sendMessage(reader.result, 'image');
     reader.onerror = () => toast({ title: 'Upload Failed', description: 'Error reading file.', status: 'error', duration: 3000, isClosable: true });
     reader.readAsDataURL(file);
     fileInputRef.current.value = '';
@@ -789,7 +789,7 @@ function App() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorderRef.current = new MediaRecorder(stream);
-      audioChunksRef.current   = [];
+      audioChunksRef.current = [];
       mediaRecorderRef.current.ondataavailable = (e) => audioChunksRef.current.push(e.data);
       mediaRecorderRef.current.onstop = () => {
         setAudioBlob(new Blob(audioChunksRef.current, { type: 'audio/webm' }));
@@ -814,7 +814,7 @@ function App() {
   const sendAudioMessage = () => {
     if (!audioBlob) return;
     const reader = new FileReader();
-    reader.onload  = () => sendMessage(reader.result, 'audio');
+    reader.onload = () => sendMessage(reader.result, 'audio');
     reader.onerror = () => toast({ title: 'Audio Send Failed', status: 'error', duration: 3000, isClosable: true });
     reader.readAsDataURL(audioBlob);
   };
@@ -825,12 +825,12 @@ function App() {
     setTimeout(() => scrollToBottom(), 100);
   }, [scrollToBottom, isMobile, onDrawerClose]);
 
-  const handleEmojiClick  = (emojiObject) => { setMessageContent(prev => prev + emojiObject.emoji); debouncedTyping(); };
-  const handleImageClick  = (src)         => { setExpandedImage(src); onImageOpen(); };
+  const handleEmojiClick = (emojiObject) => { setMessageContent(prev => prev + emojiObject.emoji); debouncedTyping(); };
+  const handleImageClick = (src) => { setExpandedImage(src); onImageOpen(); };
 
   const pinMessage = async (messageId) => {
     try {
-      const res  = await fetch(`${apiUrl}/messages/pin/${messageId}`, {
+      const res = await fetch(`${apiUrl}/messages/pin/${messageId}`, {
         method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       });
       const data = await res.json();
@@ -853,7 +853,7 @@ function App() {
 
   const reactToMessage = async (messageId, emoji) => {
     try {
-      const res  = await fetch(`${apiUrl}/messages/react/${messageId}`, {
+      const res = await fetch(`${apiUrl}/messages/react/${messageId}`, {
         method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ emoji }),
       });
