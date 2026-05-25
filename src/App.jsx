@@ -19,8 +19,8 @@ const MotionBox = motion(Box);
 
 // ─── API / WS base URLs ───────────────────────────────────────────────────────
 const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-const apiUrl = isLocal ? 'http://localhost:8000' : 'http://13.48.46.222';
-const wsUrl = isLocal ? 'ws://localhost:8000/ws' : 'ws://13.48.46.222/ws';
+const apiUrl = isLocal ? 'http://localhost:8000' : 'https://13.48.46.222.nip.io';
+const wsUrl = isLocal ? 'ws://localhost:8000/ws' : 'wss://13.48.46.222.nip.io/ws';
 
 // ─── App ─────────────────────────────────────────────────────────────────────
 function App() {
