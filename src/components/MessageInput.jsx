@@ -10,7 +10,6 @@ import { FiSend } from 'react-icons/fi';
 import { TypingIndicator } from './Indicators';
 import { formatTime } from '../utils/formatters';
 
-const MotionBox = motion(Box);
 const MotionIconButton = motion(IconButton);
 
 function MessageInput({

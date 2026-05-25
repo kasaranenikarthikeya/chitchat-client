@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-    Box, Flex, VStack, HStack, Text, Input, Button, IconButton, Avatar, Badge,
+    Box, Flex, VStack, HStack, Text, Input, Button, IconButton, Avatar,
     Drawer, DrawerOverlay, DrawerContent, DrawerBody,
     Spinner, Skeleton, Tooltip, Menu, MenuButton, MenuList, MenuItem,
     Tab, TabList, TabPanel, TabPanels, Tabs,
@@ -9,7 +9,6 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaPalette, FaUserPlus, FaCheck, FaTimes, FaBars } from 'react-icons/fa';
 import { FiUsers, FiSettings, FiLogOut, FiSearch } from 'react-icons/fi';
-import { StatusIndicator } from './Indicators';
 import { formatTimestamp } from '../utils/formatters';
 import { sidebarVariants } from '../constants/motionVariants';
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, HStack, IconButton, Text } from '@chakra-ui/react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { FaTimes } from 'react-icons/fa';
 
 const MotionBox = motion(Box);
