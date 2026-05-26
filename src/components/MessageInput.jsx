@@ -12,6 +12,29 @@ import { formatTime } from '../utils/formatters';
 
 const MotionIconButton = motion(IconButton);
 
+const AudioPreviewPlayer = ({ audioBlob }) => {
+    const [previewUrl, setPreviewUrl] = React.useState(null);
+
+    React.useEffect(() => {
+        if (!audioBlob) return;
+        const url = URL.createObjectURL(audioBlob);
+        setPreviewUrl(url);
+        return () => {
+            URL.revokeObjectURL(url);
+        };
+    }, [audioBlob]);
+
+    if (!previewUrl) return null;
+
+    return (
+        <audio
+            src={previewUrl}
+            controls
+            style={{ width: '100%', height: '32px', borderRadius: '16px' }}
+        />
+    );
+};
+
 function MessageInput({
     selectedUser,
     messageContent, setMessageContent,
@@ -21,7 +44,7 @@ function MessageInput({
     fileInputRef,
     debouncedTyping, stopTyping,
     sendMessage,
-    startRecording, stopRecording, sendAudioMessage,
+    startRecording, stopRecording, cancelRecording, sendAudioMessage,
     handleEmojiClick, handleImageUpload,
     currentTheme,
 }) {
@@ -78,8 +101,79 @@ function MessageInput({
                         />
                     </Tooltip>
                 </HStack>
+            ) : isRecording ? (
+                /* Recording Mode */
+                <HStack
+                    spacing={3} className="message-input-wrapper"
+                    maxW="100%" bg="rgba(239,68,68,0.06)" border="1px solid" borderColor="rgba(239,68,68,0.2)"
+                    p={2} rounded="full" w="100%" justify="space-between" align="center"
+                >
+                    <HStack spacing={2} pl={2}>
+                        <Box w="8px" h="8px" rounded="full" bg="red.500" animation="pulse 1.5s infinite" />
+                        <Text color="white" fontSize="sm" fontWeight="600">{formatTime(recordingTime)}</Text>
+                        <Text color="var(--text-secondary)" fontSize="xs" display={{ base: 'none', sm: 'inline' }}>Recording voice...</Text>
+                    </HStack>
+                    <HStack spacing={2}>
+                        <Tooltip label="Discard Recording" placement="top">
+                            <MotionIconButton
+                                icon={<FaTimes size={14} />}
+                                onClick={cancelRecording}
+                                color="white" bg="red.500" size="sm" rounded="full"
+                                _hover={{ bg: 'red.600' }}
+                                whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.95 }}
+                                aria-label="Discard recording"
+                            />
+                        </Tooltip>
+                        <Tooltip label="Stop & Review" placement="top">
+                            <MotionIconButton
+                                icon={<FaCheck size={14} />}
+                                onClick={stopRecording}
+                                color="white" bg="green.500" size="sm" rounded="full"
+                                _hover={{ bg: 'green.600' }}
+                                whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.95 }}
+                                aria-label="Stop and review recording"
+                            />
+                        </Tooltip>
+                    </HStack>
+                </HStack>
+            ) : audioBlob ? (
+                /* Review Mode (Audio recorded, ready to play back or send) */
+                <HStack
+                    spacing={3} className="message-input-wrapper"
+                    maxW="100%" bg="rgba(108, 92, 231, 0.08)" border="1px solid" borderColor="rgba(108, 92, 231, 0.25)"
+                    p={2} rounded="full" w="100%" align="center"
+                >
+                    <Text fontSize="xs" fontWeight="bold" color="var(--accent-primary)" pl={3} display={{ base: 'none', sm: 'inline' }}>
+                        Voice Preview:
+                    </Text>
+                    <Box flex="1" maxW="100%" overflow="hidden">
+                        <AudioPreviewPlayer audioBlob={audioBlob} />
+                    </Box>
+                    <HStack spacing={2} pr={1}>
+                        <Tooltip label="Discard Voice Message" placement="top">
+                            <MotionIconButton
+                                icon={<FaTimes size={14} />}
+                                onClick={cancelRecording}
+                                color="white" bg="red.500" size="sm" rounded="full"
+                                _hover={{ bg: 'red.600' }}
+                                whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.95 }}
+                                aria-label="Discard voice message"
+                            />
+                        </Tooltip>
+                        <Tooltip label="Send Voice Message" placement="top">
+                            <MotionIconButton
+                                icon={<FiSend size={14} />}
+                                onClick={sendAudioMessage}
+                                color="white" bg="var(--accent-primary)" size="sm" rounded="full"
+                                _hover={{ opacity: 0.85 }}
+                                whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.95 }}
+                                aria-label="Send voice message"
+                            />
+                        </Tooltip>
+                    </HStack>
+                </HStack>
             ) : (
-                /* Normal input mode */
+                /* Normal Text / Image / Emoji Input Mode */
                 <HStack
                     spacing={1} className="message-input-wrapper"
                     maxW="100%"
@@ -142,41 +236,17 @@ function MessageInput({
                     </Tooltip>
                     <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" hidden />
 
-                    {/* Recording controls */}
-                    {isRecording ? (
-                        <HStack spacing={2} bg="rgba(239,68,68,0.1)" rounded="full" px={3} py={1}>
-                            <Box w="8px" h="8px" rounded="full" bg="red.500" animation="pulse 1.5s infinite" />
-                            <Text color="white" fontSize="sm" fontWeight="500" minW="40px">{formatTime(recordingTime)}</Text>
-                            <Tooltip label="Stop" placement="top">
-                                <MotionIconButton
-                                    icon={<FaTimes size={12} />} onClick={stopRecording}
-                                    color="white" bg="red.500" size="xs" rounded="full"
-                                    _hover={{ bg: 'red.600' }}
-                                    whileTap={{ scale: 0.9 }}
-                                />
-                            </Tooltip>
-                            <Tooltip label="Send Audio" placement="top">
-                                <MotionIconButton
-                                    icon={<FiSend size={12} />} onClick={sendAudioMessage}
-                                    color="white" bg="var(--accent-primary)" size="xs" rounded="full"
-                                    _hover={{ opacity: 0.85 }}
-                                    isDisabled={!audioBlob}
-                                    whileTap={{ scale: 0.9 }}
-                                />
-                            </Tooltip>
-                        </HStack>
-                    ) : (
-                        <Tooltip label="Voice Message" placement="top">
-                            <IconButton
-                                icon={<FaMicrophone size={16} />} onClick={startRecording}
-                                color="var(--text-secondary)"
-                                _hover={{ color: '#ff6b6b', bg: 'transparent' }}
-                                variant="ghost" size="md" rounded="full"
-                                aria-label="Start recording"
-                                transition="all 0.15s ease"
-                            />
-                        </Tooltip>
-                    )}
+                    {/* Microphone icon (starts recording) */}
+                    <Tooltip label="Voice Message" placement="top">
+                        <IconButton
+                            icon={<FaMicrophone size={16} />} onClick={startRecording}
+                            color="var(--text-secondary)"
+                            _hover={{ color: '#ff6b6b', bg: 'transparent' }}
+                            variant="ghost" size="md" rounded="full"
+                            aria-label="Start recording"
+                            transition="all 0.15s ease"
+                        />
+                    </Tooltip>
 
                     {/* Send button */}
                     <MotionIconButton
@@ -186,7 +256,7 @@ function MessageInput({
                         bg="var(--accent-primary)"
                         size="md" rounded="full"
                         _hover={{ opacity: 0.85 }}
-                        isDisabled={!messageContent.trim() && !audioBlob}
+                        isDisabled={!messageContent.trim()}
                         aria-label="Send message"
                         boxShadow="0 2px 10px rgba(108,92,231,0.35)"
                         whileHover={{ scale: 1.05 }}

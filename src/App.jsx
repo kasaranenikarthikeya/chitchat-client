@@ -31,6 +31,7 @@ function App() {
   const [showPassword, setShowPassword] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [currentUsername, setCurrentUsername] = useState(localStorage.getItem('username') || '');
+  const [currentAvatarUrl, setCurrentAvatarUrl] = useState(null);
 
   // ── Data ────────────────────────────────────────────────────────────────────
   const [searchQuery, setSearchQuery] = useState('');
@@ -47,6 +48,9 @@ function App() {
   const [onlineUsers, setOnlineUsers] = useState({});
   const [typingUsers, setTypingUsers] = useState({});
   const [lastSeen, setLastSeen] = useState({});
+  const [showScrollBottom, setShowScrollBottom] = useState(false);
+  const [tabHasFocus, setTabHasFocus] = useState(true);
+  const [totalUnreadFlash, setTotalUnreadFlash] = useState(0);
 
   // ── UI ──────────────────────────────────────────────────────────────────────
   const [isLoading, setIsLoading] = useState(false);
@@ -109,6 +113,7 @@ function App() {
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const recordingTimerRef = useRef(null);
+  const recordingStreamRef = useRef(null);
   const audioRefs = useRef({});
   const sidebarRef = useRef(null);
   const resizeRef = useRef(null);
@@ -118,6 +123,12 @@ function App() {
   const typingTimeoutRef = useRef({});
   const messageVisibilityTimers = useRef({});
   const wsHandlersRef = useRef({});
+  const conversationsRef = useRef(conversations);
+  conversationsRef.current = conversations;
+  const reconnectingRef = useRef(false);
+  const notifAudioRef = useRef(null);
+  const titleIntervalRef = useRef(null);
+  const originalTitle = useRef('ChitChat');
 
   const toast = useToast();
 
@@ -132,9 +143,17 @@ function App() {
   const [activeTab, setActiveTab] = useState('chats');
 
   // Scroll helper 
-  const scrollToBottom = useCallback(() => {
-    if (messagesEndRef.current && chatContainerRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'auto', block: 'end' });
+  const scrollToBottom = useCallback((behavior = 'auto') => {
+    const container = chatContainerRef.current;
+    if (container) {
+      if (behavior === 'smooth') {
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior: 'smooth'
+        });
+      } else {
+        container.scrollTop = container.scrollHeight;
+      }
     }
   }, []);
 
@@ -142,15 +161,88 @@ function App() {
     if (!selectedUser || !conversations.length) return;
     const conv = conversations.find(c => c.username === selectedUser);
     if (conv && conv.messages.length > 0 && !isUserScrolling.current) {
-      const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
-      if (scrollHeight - scrollTop - clientHeight < 50) scrollToBottom();
+      const c = chatContainerRef.current;
+      if (c) {
+        const { scrollTop, scrollHeight, clientHeight } = c;
+        if (scrollHeight - scrollTop - clientHeight < 150) scrollToBottom();
+      }
     }
   }, [conversations, selectedUser, scrollToBottom]);
 
   useEffect(() => {
     isUserScrolling.current = false;
     lastScrollTop.current = 0;
+    setShowScrollBottom(false);
   }, [selectedUser]);
+
+  // ── Notification sound (tiny base64 beep) ─────────────────────────────────────
+  useEffect(() => {
+    // Create a very short notification beep using AudioContext
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.15, audioCtx.sampleRate);
+      const channelData = buffer.getChannelData(0);
+      for (let i = 0; i < buffer.length; i++) {
+        const t = i / audioCtx.sampleRate;
+        channelData[i] = Math.sin(2 * Math.PI * 880 * t) * Math.exp(-t * 20) * 0.3;
+      }
+      notifAudioRef.current = { ctx: audioCtx, buffer };
+    } catch (e) {
+      console.warn('Audio notification not available:', e);
+    }
+  }, []);
+
+  const playNotificationSound = useCallback(() => {
+    if (isMuted || !notifAudioRef.current) return;
+    try {
+      const { ctx, buffer } = notifAudioRef.current;
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      source.start();
+    } catch (e) {
+      // Ignore audio errors (user hasn't interacted yet)
+    }
+  }, [isMuted]);
+
+  // ── Browser tab title flash ───────────────────────────────────────────────────
+  useEffect(() => {
+    const handleFocus = () => {
+      setTabHasFocus(true);
+      setTotalUnreadFlash(0);
+      document.title = originalTitle.current;
+      if (titleIntervalRef.current) {
+        clearInterval(titleIntervalRef.current);
+        titleIntervalRef.current = null;
+      }
+    };
+    const handleBlur = () => setTabHasFocus(false);
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('blur', handleBlur);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('blur', handleBlur);
+      if (titleIntervalRef.current) clearInterval(titleIntervalRef.current);
+    };
+  }, []);
+
+  // Request desktop notification permission on mount
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  const flashTabTitle = useCallback((count) => {
+    if (tabHasFocus) return;
+    setTotalUnreadFlash(prev => prev + count);
+    if (titleIntervalRef.current) clearInterval(titleIntervalRef.current);
+    titleIntervalRef.current = setInterval(() => {
+      document.title = document.title === originalTitle.current
+        ? `(${totalUnreadFlash + count}) New Messages — ChitChat`
+        : originalTitle.current;
+    }, 1200);
+  }, [tabHasFocus, totalUnreadFlash]);
 
   // ── Fetch friend requests ─────────────────────────────────────────────────────
   const fetchFriendRequests = useCallback(async () => {
@@ -173,13 +265,79 @@ function App() {
     }
   }, [token, currentUsername, toast]);
 
+  // ── Mark message as read ──────────────────────────────────────────────────────
+  const markMessageAsRead = useCallback(async (messageId) => {
+    setConversations(prev => prev.map(c => ({
+      ...c, messages: c.messages.map(m => m.id === messageId ? { ...m, is_read: true, is_delivered: true } : m),
+    })));
+    try {
+      const res = await fetch(`${apiUrl}/messages/mark_read/${messageId}`, {
+        method: 'POST', headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error((await res.json()).detail || 'Failed to mark as read');
+    } catch (e) {
+      console.error('Mark message as read error:', e);
+    }
+  }, [token]);
+
+  // ── Batch mark read on conversation open ──────────────────────────────────────
+  const markConversationAsRead = useCallback(async (senderUsername) => {
+    if (!token || !senderUsername) return;
+    try {
+      const res = await fetch(`${apiUrl}/messages/mark_read_batch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ sender_username: senderUsername }),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.marked_ids && data.marked_ids.length > 0) {
+        const ids = new Set(data.marked_ids);
+        setConversations(prev => prev.map(c => ({
+          ...c, messages: c.messages.map(m => ids.has(m.id) ? { ...m, is_read: true, is_delivered: true } : m),
+        })));
+      }
+    } catch (e) {
+      console.error('Batch mark read error:', e);
+    }
+  }, [token]);
+
   // ── WebSocket message handlers ────────────────────────────────────────────────
+  const selectConversation = useCallback((uname) => {
+    setSelectedUser(uname);
+    if (isMobile) onDrawerClose();
+    // Scroll instantly to avoid flashing or laggy slide
+    scrollToBottom();
+    // Re-scroll on slight delays to account for rendering/layout shifts
+    setTimeout(() => scrollToBottom(), 30);
+    setTimeout(() => scrollToBottom(), 100);
+    // Batch mark read for the newly selected conversation
+    markConversationAsRead(uname);
+  }, [scrollToBottom, isMobile, onDrawerClose, markConversationAsRead]);
+
   const handleNewMessage = useCallback((message) => {
     if (!message.id || !message.content || !message.sender_username || !message.recipient_username) return;
 
     const convUsername = message.sender_username === currentUsername
       ? message.recipient_username
       : message.sender_username;
+
+    // Check if we should auto-mark as read: incoming message, currently viewing, tab is focused, and scrolled to bottom
+    const isIncoming = message.sender_username !== currentUsername;
+    const isViewing = selectedUser === convUsername;
+    let shouldAutoMarkRead = false;
+
+    if (isIncoming && isViewing && tabHasFocus) {
+      const c = chatContainerRef.current;
+      if (c) {
+        const { scrollHeight, scrollTop, clientHeight } = c;
+        if (scrollHeight - scrollTop - clientHeight < 150) {
+          shouldAutoMarkRead = true;
+        }
+      } else {
+        shouldAutoMarkRead = true;
+      }
+    }
 
     setConversations(prev => {
       const idx = prev.findIndex(c => c.username === convUsername);
@@ -190,7 +348,7 @@ function App() {
         timestamp: message.timestamp || new Date().toISOString(),
         reactions: Array.isArray(message.reactions) ? message.reactions : [],
         is_pinned: message.is_pinned || false,
-        is_read: message.is_read || false,
+        is_read: message.is_read || shouldAutoMarkRead || false,
         status: message.status || 'sent',
       };
 
@@ -226,12 +384,49 @@ function App() {
       return newConvs;
     });
 
+    if (shouldAutoMarkRead) {
+      markMessageAsRead(message.id);
+    }
+
     if (selectedUser === convUsername) {
       const c = chatContainerRef.current;
       if (c) {
         const { scrollHeight, scrollTop, clientHeight } = c;
-        if (message.sender_username === currentUsername || scrollHeight - scrollTop - clientHeight < 100) {
-          setTimeout(() => scrollToBottom(), 50);
+        if (message.sender_username === currentUsername || scrollHeight - scrollTop - clientHeight < 150) {
+          setTimeout(() => scrollToBottom('smooth'), 50);
+        }
+      }
+    }
+
+    // Play notification sound and show native desktop notification for incoming messages from others
+    if (message.sender_username !== currentUsername && message.type !== 'friend_request') {
+      if (selectedUser !== convUsername || !tabHasFocus) {
+        playNotificationSound();
+        flashTabTitle(1);
+
+        if ('Notification' in window && Notification.permission === 'granted') {
+          let bodyText = '';
+          if (message.type === 'audio') {
+            bodyText = '🎤 Sent a voice message';
+          } else if (message.type === 'image') {
+            bodyText = '📷 Sent an image';
+          } else {
+            bodyText = message.content;
+          }
+
+          const notification = new Notification(`New message from ${message.sender_username}`, {
+            body: bodyText,
+            tag: message.sender_username,
+            renotify: true,
+            icon: '/favicon.ico',
+          });
+
+          notification.onclick = (e) => {
+            e.preventDefault();
+            window.focus();
+            selectConversation(message.sender_username);
+            notification.close();
+          };
         }
       }
     }
@@ -241,7 +436,7 @@ function App() {
       fetchFriendRequests();
       toast({ title: 'New Friend Request!', description: `${message.sender_username} wants to connect`, status: 'info', duration: 5000, isClosable: true });
     }
-  }, [currentUsername, fetchFriendRequests, toast, selectedUser, scrollToBottom]);
+  }, [currentUsername, fetchFriendRequests, toast, selectedUser, scrollToBottom, playNotificationSound, flashTabTitle, tabHasFocus, markMessageAsRead, selectConversation]);
 
   const handleMessageRead = useCallback((messageId) => {
     setConversations(prev => prev.map(c => ({ ...c, messages: c.messages.map(m => m.id === messageId ? { ...m, is_read: true } : m) })));
@@ -300,6 +495,27 @@ function App() {
 
   const handlePing = useCallback(() => { }, []);
 
+  // New handlers for delivery and batch read
+  const handleMessageDelivered = useCallback((data) => {
+    setConversations(prev => prev.map(c => ({
+      ...c, messages: c.messages.map(m => m.id === data.id ? { ...m, is_delivered: true } : m),
+    })));
+  }, []);
+
+  const handleBatchRead = useCallback((data) => {
+    const ids = new Set(data.message_ids);
+    setConversations(prev => prev.map(c => ({
+      ...c, messages: c.messages.map(m => ids.has(m.id) ? { ...m, is_read: true, is_delivered: true } : m),
+    })));
+  }, []);
+
+  const handleBatchDelivered = useCallback((data) => {
+    const ids = new Set(data.message_ids);
+    setConversations(prev => prev.map(c => ({
+      ...c, messages: c.messages.map(m => ids.has(m.id) ? { ...m, is_delivered: true } : m),
+    })));
+  }, []);
+
 
   // Keep wsHandlersRef up to date
   useEffect(() => {
@@ -307,6 +523,7 @@ function App() {
       new_message: handleNewMessage,
       message: handleNewMessage,
       read: handleMessageRead,
+      read_batch: handleBatchRead,
       edit: handleMessageEdit,
       delete: handleMessageDelete,
       status: handleUserStatus,
@@ -315,75 +532,100 @@ function App() {
       reaction: handleReaction,
       pinned: handlePinned,
       ping: handlePing,
+      delivered: handleMessageDelivered,
+      delivered_batch: handleBatchDelivered,
     };
   }, [
-    handleNewMessage, handleMessageRead, handleMessageEdit, handleMessageDelete,
+    handleNewMessage, handleMessageRead, handleBatchRead, handleMessageEdit, handleMessageDelete,
     handleUserStatus, handleFriendAccepted, handleTyping, handleReaction, handlePinned, handlePing,
+    handleMessageDelivered, handleBatchDelivered,
   ]);
 
-  // ── Mark message as read ──────────────────────────────────────────────────────
-  const markMessageAsRead = useCallback(async (messageId) => {
-    try {
-      const res = await fetch(`${apiUrl}/messages/mark_read/${messageId}`, {
-        method: 'POST', headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error((await res.json()).detail || 'Failed to mark as read');
-    } catch (e) {
-      console.error('Mark message as read error:', e);
-    }
-  }, [token]);
 
   // ── WebSocket connection ───────────────────────────────────────────────────────
   useEffect(() => {
     if (!token) return;
-    if (socketRef.current?.readyState === WebSocket.OPEN) return;
+    if (socketRef.current?.readyState === WebSocket.OPEN || socketRef.current?.readyState === WebSocket.CONNECTING) return;
+    if (reconnectingRef.current) return;
 
     let reconnectAttempts = 0;
-    const maxAttempts = 5;
+    const maxAttempts = 10;
     const maxDelay = 30000;
+    let isMounted = true;
 
     const attemptReconnect = () => {
+      if (!isMounted) return;
       if (reconnectAttempts >= maxAttempts) {
-        toast({ title: 'Connection Failed', description: 'Unable to connect after multiple attempts.', status: 'error', duration: 5000, isClosable: true });
+        reconnectingRef.current = false;
+        toast({ title: 'Connection Failed', description: 'Unable to connect after multiple attempts. Refresh the page.', status: 'error', duration: 8000, isClosable: true });
         return;
       }
+      reconnectingRef.current = true;
+      
+      // Close existing socket if any
+      if (socketRef.current) {
+        try { socketRef.current.close(); } catch (e) { /* ignore */ }
+        socketRef.current = null;
+      }
+      
       const ws = new WebSocket(`${wsUrl}?token=${token}`);
       socketRef.current = ws;
 
       ws.onopen = () => {
+        if (!isMounted) { ws.close(); return; }
         setIsSocketConnected(true);
         reconnectAttempts = 0;
-        toast({ title: 'Connected', description: 'Real-time messaging enabled.', status: 'success', duration: 2000, isClosable: true });
+        reconnectingRef.current = false;
+        toast({ title: 'Connected', description: 'Real-time messaging active.', status: 'success', duration: 2000, isClosable: true });
       };
 
       ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        if (wsHandlersRef.current[data.type]) wsHandlersRef.current[data.type](data.data);
-        else console.warn('WebSocket: Unknown type:', data.type);
+        try {
+          const data = JSON.parse(event.data);
+          if (wsHandlersRef.current[data.type]) wsHandlersRef.current[data.type](data.data);
+          else if (data.type !== 'ping') console.warn('WebSocket: Unknown type:', data.type);
+        } catch (e) {
+          console.error('WebSocket message parse error:', e);
+        }
       };
 
       ws.onclose = (event) => {
+        if (!isMounted) return;
         setIsSocketConnected(false);
+        reconnectingRef.current = false;
+        if (event.code === 4001) {
+          // Invalid token — don't reconnect
+          toast({ title: 'Session Expired', description: 'Please log in again.', status: 'error', duration: 5000, isClosable: true });
+          return;
+        }
         const delay = Math.min(1000 * 2 ** reconnectAttempts, maxDelay);
         reconnectAttempts++;
-        toast({ title: 'Disconnected', description: `Reconnecting in ${delay / 1000}s...`, status: 'warning', duration: 3000, isClosable: true });
+        if (reconnectAttempts <= 3) {
+          toast({ title: 'Disconnected', description: `Reconnecting in ${Math.round(delay / 1000)}s...`, status: 'warning', duration: 3000, isClosable: true });
+        }
         setTimeout(attemptReconnect, delay);
       };
 
-      ws.onerror = () => { setIsSocketConnected(false); ws.close(); };
+      ws.onerror = () => {
+        setIsSocketConnected(false);
+        // onclose will handle reconnection
+      };
     };
 
     attemptReconnect();
     return () => {
-      if (socketRef.current?.readyState === WebSocket.OPEN) {
-        socketRef.current.close(1000, 'Component unmounted');
+      isMounted = false;
+      reconnectingRef.current = false;
+      if (socketRef.current) {
+        try { socketRef.current.close(1000, 'Component unmounted'); } catch (e) { /* ignore */ }
+        socketRef.current = null;
       }
     };
   }, [token, toast]);
 
   // ── Fetch current user ────────────────────────────────────────────────────────
   const fetchCurrentUser = useCallback(async () => {
-    if (!token || currentUsername) return;
+    if (!token) return;
     setIsLoading(true);
     try {
       const res = await fetch(`${apiUrl}/users/me`, { headers: { Authorization: `Bearer ${token}` } });
@@ -391,18 +633,20 @@ function App() {
       if (!res.ok) throw new Error(data.detail || 'Failed to fetch user');
       localStorage.setItem('username', data.username);
       setCurrentUsername(data.username);
+      setCurrentAvatarUrl(data.avatar_url);
     } catch (e) {
       console.error('Fetch current user error:', e);
       localStorage.removeItem('token');
       localStorage.removeItem('username');
       setToken(null);
       setCurrentUsername('');
+      setCurrentAvatarUrl(null);
       toast({ title: 'Session Expired', description: 'Please log in again.', status: 'error', duration: 3000, isClosable: true });
     } finally {
       setIsLoading(false);
       setIsInitialLoad(false);
     }
-  }, [token, currentUsername, toast]);
+  }, [token, toast]);
 
   // ── Fetch conversations ───────────────────────────────────────────────────────
   const fetchConversations = useCallback(async () => {
@@ -419,6 +663,7 @@ function App() {
         messages: conv.messages.map(msg => ({
           ...msg,
           type: msg.type || 'text',
+          is_delivered: msg.is_delivered ?? false,
           reactions: Array.isArray(msg.reactions) ? msg.reactions : [],
         })),
       })));
@@ -442,14 +687,24 @@ function App() {
     fetchConversations();
   }, [token, fetchCurrentUser, fetchFriendRequests, fetchConversations]);
 
+  // ── Batch mark read when opening a conversation or when tab gains focus ─────────
+  useEffect(() => {
+    if (!selectedUser || !token || !tabHasFocus) return;
+    markConversationAsRead(selectedUser);
+  }, [selectedUser, token, tabHasFocus, markConversationAsRead]);
+
   // ── Intersection observer (blue ticks) ───────────────────────────────────────
+  const activeMessagesCount = useMemo(() => {
+    return conversations.find(c => c.username === selectedUser)?.messages.length || 0;
+  }, [conversations, selectedUser]);
+
   useEffect(() => {
     if (!selectedUser || !socketRef.current || !currentUsername) return;
 
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         const messageId = parseInt(entry.target.dataset.messageId);
-        const msg = conversations.find(c => c.username === selectedUser)?.messages.find(m => m.id === messageId);
+        const msg = conversationsRef.current.find(c => c.username === selectedUser)?.messages.find(m => m.id === messageId);
         if (!msg || msg.is_read || msg.recipient_username !== currentUsername) return;
 
         if (entry.isIntersecting) {
@@ -476,7 +731,7 @@ function App() {
       Object.values(messageVisibilityTimers.current).forEach(clearTimeout);
       messageVisibilityTimers.current = {};
     };
-  }, [selectedUser, conversations, currentUsername, markMessageAsRead]);
+  }, [selectedUser, currentUsername, markMessageAsRead, activeMessagesCount]);
 
   // ── Recording timer ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -518,7 +773,7 @@ function App() {
     const handleResize = (e) => {
       if (resizeRef.current && !isMobile) {
         const w = e.clientX;
-        if (w >= 280 && w <= 400) {
+        if (w >= 260 && w <= 480) {
           setSidebarWidth(w);
           localStorage.setItem('sidebarWidth', w);
           if (sidebarRef.current) sidebarRef.current.style.transition = 'none';
@@ -526,7 +781,12 @@ function App() {
       }
     };
     const handlePointerUp = () => {
+      if (resizeRef.current) {
+        resizeRef.current.classList.remove('resizing');
+      }
       resizeRef.current = null;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
       document.removeEventListener('pointermove', handleResize);
       document.removeEventListener('pointerup', handlePointerUp);
       if (sidebarRef.current) sidebarRef.current.style.transition = 'width 0.4s ease';
@@ -536,6 +796,9 @@ function App() {
       if (handle) {
         handle.addEventListener('pointerdown', (e) => {
           resizeRef.current = e.target;
+          e.target.classList.add('resizing');
+          document.body.style.cursor = 'col-resize';
+          document.body.style.userSelect = 'none';
           document.addEventListener('pointermove', handleResize);
           document.addEventListener('pointerup', handlePointerUp);
         });
@@ -616,6 +879,26 @@ function App() {
     }
   };
 
+  // Debounced search as user types
+  useEffect(() => {
+    if (!token) return;
+    const search = async () => {
+      try {
+        const res = await fetch(`${apiUrl}/users?search=${searchQuery}`, { headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        if (res.ok) setUsers(data);
+      } catch (e) {
+        console.error('Search error:', e);
+      }
+    };
+    
+    const delayDebounceFn = setTimeout(() => {
+      search();
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery, token]);
+
   const sendFriendRequest = async (recipientUsername) => {
     setIsLoading(true);
     try {
@@ -669,7 +952,7 @@ function App() {
     const newMessage = {
       id: clientTempId, sender_username: currentUsername, recipient_username: targetRecipient,
       content, type, timestamp: new Date().toISOString(),
-      is_read: false, reactions: [], is_pinned: false,
+      is_delivered: false, is_read: false, reactions: [], is_pinned: false,
       status: 'pending', client_temp_id: clientTempId,
     };
 
@@ -788,15 +1071,25 @@ function App() {
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      recordingStreamRef.current = stream;
       mediaRecorderRef.current = new MediaRecorder(stream);
       audioChunksRef.current = [];
-      mediaRecorderRef.current.ondataavailable = (e) => audioChunksRef.current.push(e.data);
+      mediaRecorderRef.current.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
       mediaRecorderRef.current.onstop = () => {
-        setAudioBlob(new Blob(audioChunksRef.current, { type: 'audio/webm' }));
-        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        setAudioBlob(blob);
+        if (recordingStreamRef.current) {
+          recordingStreamRef.current.getTracks().forEach(t => t.stop());
+          recordingStreamRef.current = null;
+        }
       };
       mediaRecorderRef.current.start();
       setIsRecording(true);
+      setAudioBlob(null);
       toast({ title: 'Recording Started', status: 'info', duration: 2000, isClosable: true });
     } catch (e) {
       toast({ title: 'Recording Failed', description: 'Microphone access denied.', status: 'error', duration: 3000, isClosable: true });
@@ -807,26 +1100,66 @@ function App() {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
-      toast({ title: 'Recording Stopped', status: 'info', duration: 2000, isClosable: true });
+      toast({ title: 'Recording Stopped. Previewing audio.', status: 'success', duration: 2000, isClosable: true });
     }
+  };
+
+  const cancelRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+    }
+    if (recordingStreamRef.current) {
+      recordingStreamRef.current.getTracks().forEach(t => t.stop());
+      recordingStreamRef.current = null;
+    }
+    setIsRecording(false);
+    setAudioBlob(null);
+    toast({ title: 'Recording Discarded', status: 'info', duration: 2000, isClosable: true });
   };
 
   const sendAudioMessage = () => {
     if (!audioBlob) return;
     const reader = new FileReader();
-    reader.onload = () => sendMessage(reader.result, 'audio');
+    reader.onload = () => {
+      sendMessage(reader.result, 'audio');
+      setAudioBlob(null);
+    };
     reader.onerror = () => toast({ title: 'Audio Send Failed', status: 'error', duration: 3000, isClosable: true });
     reader.readAsDataURL(audioBlob);
   };
 
-  const selectConversation = useCallback((uname) => {
-    setSelectedUser(uname);
-    if (isMobile) onDrawerClose();
-    setTimeout(() => scrollToBottom(), 100);
-  }, [scrollToBottom, isMobile, onDrawerClose]);
+  const updateAvatar = async (base64Data) => {
+    try {
+      const res = await fetch(`${apiUrl}/users/avatar`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ avatar_url: base64Data })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Failed to update avatar');
+      setCurrentAvatarUrl(base64Data);
+    } catch (e) {
+      toast({ title: 'Avatar Update Failed', description: e.message, status: 'error', duration: 3000, isClosable: true });
+      throw e;
+    }
+  };
 
   const handleEmojiClick = (emojiObject) => { setMessageContent(prev => prev + emojiObject.emoji); debouncedTyping(); };
   const handleImageClick = (src) => { setExpandedImage(src); onImageOpen(); };
+
+  // ── Sorted conversations (latest message on top) ────────────────────────────
+  const sortedConversations = useMemo(() => {
+    return [...conversations].sort((a, b) => {
+      const aLast = a.messages[a.messages.length - 1];
+      const bLast = b.messages[b.messages.length - 1];
+      if (!aLast) return 1;
+      if (!bLast) return -1;
+      return new Date(bLast.timestamp) - new Date(aLast.timestamp);
+    });
+  }, [conversations]);
 
   const pinMessage = async (messageId) => {
     try {
@@ -912,6 +1245,7 @@ function App() {
     localStorage.removeItem('username');
     setToken(null);
     setCurrentUsername('');
+    setCurrentAvatarUrl(null);
     if (socketRef.current) socketRef.current.close();
     toast({ title: 'Logged Out', status: 'info', duration: 2000, isClosable: true });
   };
@@ -950,7 +1284,7 @@ function App() {
         isSocketConnected={isSocketConnected}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        conversations={conversations}
+        conversations={sortedConversations}
         selectedUser={selectedUser}
         onlineUsers={onlineUsers}
         typingUsers={typingUsers}
@@ -970,6 +1304,8 @@ function App() {
         sendFriendRequest={sendFriendRequest}
         respondFriendRequest={respondFriendRequest}
         onLogout={handleLogout}
+        currentAvatarUrl={currentAvatarUrl}
+        updateAvatar={updateAvatar}
       />
 
       {/* ── Main chat area ── */}
@@ -1070,6 +1406,10 @@ function App() {
           chatContainerRef={chatContainerRef}
           messagesEndRef={messagesEndRef}
           isUserScrolling={isUserScrolling}
+          showScrollBottom={showScrollBottom}
+          setShowScrollBottom={setShowScrollBottom}
+          scrollToBottom={scrollToBottom}
+          markMessageAsRead={markMessageAsRead}
         />
 
         {selectedUser && (
@@ -1090,6 +1430,7 @@ function App() {
             sendMessage={sendMessage}
             startRecording={startRecording}
             stopRecording={stopRecording}
+            cancelRecording={cancelRecording}
             sendAudioMessage={sendAudioMessage}
             handleEmojiClick={handleEmojiClick}
             handleImageUpload={handleImageUpload}

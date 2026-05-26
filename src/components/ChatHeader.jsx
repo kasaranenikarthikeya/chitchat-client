@@ -52,6 +52,7 @@ function ChatHeader({
                     <Box position="relative">
                         <Avatar
                             name={selectedUser}
+                            src={conversations.find(c => c.username === selectedUser)?.avatar_url}
                             bgGradient="linear(135deg, #6c5ce7, #a29bfe)"
                             size="md"
                         />

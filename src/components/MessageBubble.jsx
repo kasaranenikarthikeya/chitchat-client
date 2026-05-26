@@ -36,13 +36,16 @@ function MessageBubble({
         else { if (playingAudio) audioRefs.current[playingAudio].pause(); audio.play(); setPlayingAudio(messageId); }
     };
 
-    /* ── Tick rendering ── */
+    /* ── Tick rendering (4 states) ── */
     const renderTicks = () => {
         if (!isSelf) return null;
 
+        // 1. Pending — spinner
         if (message.status === 'pending') {
             return <Spinner size="xs" color="whiteAlpha.500" ml={1} />;
         }
+
+        // 2. Failed — retry button
         if (message.status === 'failed') {
             return (
                 <Tooltip label="Failed — tap to retry" placement="top">
@@ -55,18 +58,27 @@ function MessageBubble({
             );
         }
 
-        // Read = double blue ticks
+        // 3. Read — double BLUE ticks (with glow)
         if (message.is_read) {
             return (
-                <Box ml={1} display="inline-flex" className="tick-icon tick-read">
+                <Box ml={1} display="inline-flex" className="tick-icon tick-read" title="Read">
                     <FaCheckDouble size={13} />
                 </Box>
             );
         }
 
-        // Sent = single grey tick
+        // 4. Delivered — double GREY ticks
+        if (message.is_delivered) {
+            return (
+                <Box ml={1} display="inline-flex" className="tick-icon tick-delivered" title="Delivered">
+                    <FaCheckDouble size={13} />
+                </Box>
+            );
+        }
+
+        // 5. Sent — single grey tick
         return (
-            <Box ml={1} display="inline-flex" className="tick-icon tick-sent">
+            <Box ml={1} display="inline-flex" className="tick-icon tick-sent" title="Sent">
                 <FaCheck size={11} />
             </Box>
         );
