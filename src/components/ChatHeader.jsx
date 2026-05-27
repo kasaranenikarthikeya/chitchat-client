@@ -26,6 +26,7 @@ function ChatHeader({
     onGroupChatModalOpen,
     onDrawerOpen, setSelectedUser,
     headerRef,
+    onStartCall,
 }) {
     const toast = useToast();
 
@@ -81,7 +82,9 @@ function ChatHeader({
                             color="var(--text-secondary)"
                             _hover={{ color: 'white', bg: 'var(--hover-bg)' }}
                             variant="ghost" size="sm" rounded="lg"
-                            onClick={() => toast({ title: 'Voice Call (coming soon)', status: 'info', duration: 1500 })}
+                            onClick={() => {
+                                if (onStartCall) onStartCall(selectedUser, 'audio');
+                            }}
                         />
                     </Tooltip>
                     <Tooltip label="Video Call" placement="bottom">
@@ -90,7 +93,9 @@ function ChatHeader({
                             color="var(--text-secondary)"
                             _hover={{ color: 'white', bg: 'var(--hover-bg)' }}
                             variant="ghost" size="sm" rounded="lg"
-                            onClick={() => toast({ title: 'Video Call (coming soon)', status: 'info', duration: 1500 })}
+                            onClick={() => {
+                                if (onStartCall) onStartCall(selectedUser, 'video');
+                            }}
                         />
                     </Tooltip>
                     <Tooltip label="Search Messages" placement="bottom">

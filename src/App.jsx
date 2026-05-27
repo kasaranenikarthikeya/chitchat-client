@@ -12,15 +12,21 @@ import ChatHeader from './components/ChatHeader';
 import MessageList from './components/MessageList';
 import MessageInput from './components/MessageInput';
 import Modals from './components/Modals';
+import { useWebRTC } from './hooks/useWebRTC';
+import CallOverlay from './components/CallOverlay';
 
 import { themes } from './constants/theme';
 
 const MotionBox = motion(Box);
 
-// ─── API / WS base URLs ───────────────────────────────────────────────────────
-const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-const apiUrl = isLocal ? 'http://localhost:8000' : 'https://13.48.46.222.nip.io';
-const wsUrl = isLocal ? 'ws://localhost:8000/ws' : 'wss://13.48.46.222.nip.io/ws';
+const hostname = window.location.hostname;
+const isLocal = hostname === 'localhost' || 
+                hostname === '127.0.0.1' || 
+                hostname.startsWith('192.168.') || 
+                hostname.startsWith('10.') || 
+                hostname.startsWith('172.');
+const apiUrl = isLocal ? `http://${hostname}:8000` : 'https://13.48.46.222.nip.io';
+const wsUrl = isLocal ? `ws://${hostname}:8000/ws` : 'wss://13.48.46.222.nip.io/ws';
 
 // ─── App ─────────────────────────────────────────────────────────────────────
 function App() {
@@ -51,6 +57,7 @@ function App() {
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const [tabHasFocus, setTabHasFocus] = useState(true);
   const [totalUnreadFlash, setTotalUnreadFlash] = useState(0);
+  const [callHistory, setCallHistory] = useState([]);
 
   // ── UI ──────────────────────────────────────────────────────────────────────
   const [isLoading, setIsLoading] = useState(false);
@@ -131,6 +138,47 @@ function App() {
   const originalTitle = useRef('ChitChat');
 
   const toast = useToast();
+
+  const fetchCallHistory = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await fetch(`${apiUrl}/calls`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setCallHistory(data);
+      }
+    } catch (e) {
+      console.error("Error fetching call history:", e);
+    }
+  }, [token]);
+
+  const {
+    callState,
+    callType,
+    partnerUsername,
+    localStream,
+    remoteStream,
+    isMuted: callIsMuted,
+    isCameraOff,
+    duration: callDuration,
+    startCall,
+    acceptCall,
+    rejectCall,
+    cancelCall,
+    endCall,
+    toggleMute: toggleCallMute,
+    toggleCamera: toggleCallCamera,
+    handleSignalingMessage,
+  } = useWebRTC({
+    socketRef,
+    currentUsername,
+    token,
+    apiUrl,
+    toast,
+    onCallEnded: fetchCallHistory,
+  });
 
   // Disclosure hooks 
   const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
@@ -534,11 +582,12 @@ function App() {
       ping: handlePing,
       delivered: handleMessageDelivered,
       delivered_batch: handleBatchDelivered,
+      call_signaling: handleSignalingMessage,
     };
   }, [
     handleNewMessage, handleMessageRead, handleBatchRead, handleMessageEdit, handleMessageDelete,
     handleUserStatus, handleFriendAccepted, handleTyping, handleReaction, handlePinned, handlePing,
-    handleMessageDelivered, handleBatchDelivered,
+    handleMessageDelivered, handleBatchDelivered, handleSignalingMessage,
   ]);
 
 
@@ -685,7 +734,8 @@ function App() {
     fetchCurrentUser();
     fetchFriendRequests();
     fetchConversations();
-  }, [token, fetchCurrentUser, fetchFriendRequests, fetchConversations]);
+    fetchCallHistory();
+  }, [token, fetchCurrentUser, fetchFriendRequests, fetchConversations, fetchCallHistory]);
 
   // ── Batch mark read when opening a conversation or when tab gains focus ─────────
   useEffect(() => {
@@ -1306,6 +1356,8 @@ function App() {
         onLogout={handleLogout}
         currentAvatarUrl={currentAvatarUrl}
         updateAvatar={updateAvatar}
+        callHistory={callHistory}
+        onStartCall={startCall}
       />
 
       {/* ── Main chat area ── */}
@@ -1339,6 +1391,7 @@ function App() {
             onDrawerOpen={onDrawerOpen}
             setSelectedUser={setSelectedUser}
             headerRef={headerRef}
+            onStartCall={startCall}
           />
         ) : (
           <Flex h="100%" align="center" justify="center" direction="column" position="relative" zIndex={1}>
@@ -1472,6 +1525,23 @@ function App() {
         friendRequests={friendRequests}
         respondFriendRequest={respondFriendRequest}
         currentTheme={currentTheme}
+      />
+
+      <CallOverlay
+        callState={callState}
+        callType={callType}
+        partnerUsername={partnerUsername}
+        localStream={localStream}
+        remoteStream={remoteStream}
+        isMuted={callIsMuted}
+        isCameraOff={isCameraOff}
+        duration={callDuration}
+        acceptCall={acceptCall}
+        rejectCall={rejectCall}
+        cancelCall={cancelCall}
+        endCall={endCall}
+        toggleMute={toggleCallMute}
+        toggleCamera={toggleCallCamera}
       />
     </Box>
   );

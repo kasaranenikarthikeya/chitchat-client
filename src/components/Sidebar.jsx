@@ -10,8 +10,8 @@ import {
 } from '@chakra-ui/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaPalette, FaUserPlus, FaCheck, FaTimes, FaBars } from 'react-icons/fa';
-import { FiUsers, FiSettings, FiLogOut, FiSearch } from 'react-icons/fi';
-import { formatTimestamp } from '../utils/formatters';
+import { FiUsers, FiSettings, FiLogOut, FiSearch, FiPhone, FiVideo, FiArrowUpRight, FiArrowDownLeft } from 'react-icons/fi';
+import { formatTimestamp, formatTime } from '../utils/formatters';
 import { sidebarVariants } from '../constants/motionVariants';
 
 const MotionBox = motion(Box);
@@ -32,6 +32,7 @@ function SidebarInner({
     selectConversation, searchUsers, sendFriendRequest, respondFriendRequest,
     onLogout,
     currentAvatarUrl, updateAvatar,
+    callHistory, onStartCall,
 }) {
     const toast = useToast();
     const { isOpen: isProfileOpen, onOpen: onProfileOpen, onClose: onProfileClose } = useDisclosure();
@@ -261,18 +262,19 @@ function SidebarInner({
             {/* ── Tabs ── */}
             <Tabs
                 variant="unstyled"
-                index={['chats', 'search', 'requests'].indexOf(activeTab)}
-                onChange={(i) => setActiveTab(['chats', 'search', 'requests'][i])}
+                index={['chats', 'calls', 'search', 'requests'].indexOf(activeTab)}
+                onChange={(i) => setActiveTab(['chats', 'calls', 'search', 'requests'][i])}
                 display="flex" flexDirection="column" flex="1" overflow="hidden"
             >
                 <TabList mx={4} mb={2} bg="var(--glass-bg-light)" rounded="xl" p="3px">
                     {[
                         { icon: <FiUsers size={14} />, label: 'Chats' },
+                        { icon: <FiPhone size={14} />, label: 'Calls' },
                         { icon: <FiSearch size={14} />, label: 'Search' },
                         { icon: <FaUserPlus size={12} />, label: friendRequestCount > 0 ? `Requests (${friendRequestCount})` : 'Requests' },
                     ].map((tab, i) => (
                         <Tab
-                            key={i} flex="1" py={2} rounded="lg" fontSize="xs" fontWeight="600"
+                            key={i} flex="1" py={2} rounded="lg" fontSize="11px" fontWeight="600"
                             color="var(--text-secondary)"
                             _selected={{
                                 bg: 'var(--accent-primary)', color: 'white',
@@ -280,7 +282,7 @@ function SidebarInner({
                             }}
                             transition="all 0.2s ease"
                         >
-                            <HStack spacing={1.5}>
+                            <HStack spacing={1}>
                                 {tab.icon}
                                 <Text>{tab.label}</Text>
                             </HStack>
@@ -429,6 +431,127 @@ function SidebarInner({
                                     <Text fontSize="2xl">💬</Text>
                                     <Text color="var(--text-secondary)" fontSize="sm" textAlign="center">
                                         No chats yet. Search for friends!
+                                    </Text>
+                                </VStack>
+                            )}
+                        </VStack>
+                    </TabPanel>
+
+                    {/* ═══ CALLS TAB ═══ */}
+                    <TabPanel p={0}>
+                        <VStack spacing={1} w="full">
+                            {isInitialLoad ? (
+                                <VStack spacing={2} w="full">
+                                    {[...Array(4)].map((_, i) => (
+                                        <Skeleton key={i} height="56px" w="full" rounded="xl"
+                                            startColor="var(--glass-bg-light)" endColor="var(--glass-bg-hover)" />
+                                    ))}
+                                </VStack>
+                            ) : callHistory && callHistory.length > 0 ? (
+                                <AnimatePresence>
+                                    {callHistory.map((log, idx) => {
+                                        const isOutgoing = log.caller_username === currentUsername;
+                                        const partnerName = isOutgoing ? log.recipient_username : log.caller_username;
+                                        const partnerAvatar = isOutgoing ? log.recipient_avatar : log.caller_avatar;
+                                        
+                                        let statusText = '';
+                                        let statusColor = '';
+                                        let StatusIcon = null;
+
+                                        if (isOutgoing) {
+                                            statusText = 'Outgoing';
+                                            statusColor = '#a29bfe';
+                                            StatusIcon = FiArrowUpRight;
+                                        } else {
+                                            if (log.status === 'completed') {
+                                                statusText = 'Incoming';
+                                                statusColor = '#00d26a';
+                                                StatusIcon = FiArrowDownLeft;
+                                            } else {
+                                                statusText = 'Missed';
+                                                statusColor = '#ff6b6b';
+                                                StatusIcon = FiArrowDownLeft;
+                                            }
+                                        }
+
+                                        return (
+                                            <MotionBox
+                                                key={log.id}
+                                                w="full"
+                                                initial={{ opacity: 0, y: 8 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ delay: idx * 0.03 }}
+                                            >
+                                                <HStack
+                                                    spacing={3} p={2.5} rounded="xl"
+                                                    bg="transparent"
+                                                    _hover={{ bg: 'var(--glass-bg-hover)' }}
+                                                    transition="all 0.15s ease"
+                                                    w="full"
+                                                >
+                                                    <Avatar
+                                                        name={partnerName}
+                                                        src={partnerAvatar}
+                                                        bgGradient="linear(135deg, #6c5ce7, #a29bfe)"
+                                                        size="sm"
+                                                        cursor="pointer"
+                                                        onClick={() => {
+                                                            selectConversation(partnerName);
+                                                            if (closeSidebar) closeSidebar();
+                                                        }}
+                                                    />
+
+                                                    <VStack align="start" spacing={0.5} flex="1" overflow="hidden">
+                                                        <Text
+                                                            fontWeight="600"
+                                                            color="white" fontSize="sm" noOfLines={1}
+                                                            cursor="pointer"
+                                                            _hover={{ color: '#a29bfe' }}
+                                                            onClick={() => {
+                                                                selectConversation(partnerName);
+                                                                if (closeSidebar) closeSidebar();
+                                                            }}
+                                                        >
+                                                            {partnerName}
+                                                        </Text>
+                                                        <HStack spacing={1} align="center">
+                                                            {StatusIcon && <Box as={StatusIcon} size={12} color={statusColor} />}
+                                                            <Text fontSize="xs" color="var(--text-secondary)">
+                                                                {statusText}
+                                                                {log.status === 'completed' && log.duration > 0 ? ` (${formatTime(log.duration)})` : ''}
+                                                            </Text>
+                                                        </HStack>
+                                                    </VStack>
+
+                                                    <HStack spacing={2} align="center">
+                                                        <Text
+                                                            fontSize="10px"
+                                                            color="var(--text-secondary)"
+                                                            whiteSpace="nowrap"
+                                                        >
+                                                            {formatTimestamp(log.timestamp)}
+                                                        </Text>
+                                                        <IconButton
+                                                            icon={log.type === 'video' ? <FiVideo size={13} /> : <FiPhone size={13} />}
+                                                            onClick={() => {
+                                                                if (onStartCall) onStartCall(partnerName, log.type);
+                                                            }}
+                                                            color="var(--text-secondary)"
+                                                            _hover={{ color: 'white', bg: 'var(--hover-bg)' }}
+                                                            variant="ghost" size="xs" rounded="md"
+                                                            aria-label="Call back"
+                                                        />
+                                                    </HStack>
+                                                </HStack>
+                                            </MotionBox>
+                                        );
+                                    })}
+                                </AnimatePresence>
+                            ) : (
+                                <VStack spacing={3} py={8} w="full">
+                                    <Text fontSize="2xl">📞</Text>
+                                    <Text color="var(--text-secondary)" fontSize="sm" textAlign="center">
+                                        No call logs yet.
                                     </Text>
                                 </VStack>
                             )}
